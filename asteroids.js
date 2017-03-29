@@ -79,9 +79,7 @@ window.onload = function init() {
 
   gl.enable(gl.DEPTH_TEST);
 
-  //
   //  Load shaders and initialize attribute buffers
-  //
   program = initShaders( gl, "vertex-shader", "fragment-shader" );
   gl.useProgram( program );
 
@@ -133,15 +131,15 @@ window.onload = function init() {
   gl.uniformMatrix4fv(proLoc, false, flatten(proj));
 
 
-  //event listeners for mouse
+  // Event listeners for mouse
   canvas.addEventListener("mousedown", function(e){
     movement = true;
     origX = e.clientX;
-  } );
+  });
 
   canvas.addEventListener("mouseup", function(e){
     movement = false;
-  } );
+  });
 
   canvas.addEventListener("mousemove", function(e){
     if(movement) {
@@ -151,7 +149,7 @@ window.onload = function init() {
       userZDir = Math.sin( radians(userAngle) );
       origX = e.clientX;
     }
-  } );
+  });
 
   // Event listener for keyboard
    window.addEventListener("keydown", function(e){
@@ -173,7 +171,7 @@ window.onload = function init() {
         userZPos += userIncr * userXDir;;
         break;
      }
-   }  );
+   });
 
   // Event listener for mousewheel
    window.addEventListener("mousewheel", function(e){
@@ -182,11 +180,9 @@ window.onload = function init() {
      } else {
        zDist -= 0.2;
      }
-   }  );
-
+   });
 
   render();
-
 }
 
 var render = function(){
