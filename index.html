@@ -1,45 +1,58 @@
-<html><head>
-  <meta charset="utf-8"/>
+<!DOCTYPE html>
+<html>
+  <head>
+    <style type="text/css">
+    canvas { background: blue; }
+    </style>
+
+
   <script id="vertex-shader" type="x-shader/x-vertex">
 
-attribute  vec4 vPosition;
-attribute  vec4 vColor;
-varying vec4 fColor;
+    attribute  vec4 vPosition;
+    attribute  vec2 vTexCoord;
 
-uniform mat4 rotation;
+    //varying vec4 fColor;
+    varying vec2 fTexCoord;
 
-void main()
-{
-    fColor = vColor;
-    gl_Position = rotation * vPosition;
-}
-</script>
+    uniform mat4 projection;
+    uniform mat4 modelview;
 
-<script id="fragment-shader" type="x-shader/x-fragment">
+    void main(){
+      fTexCoord = vTexCoord;
+      gl_Position = projection * modelview * vPosition;
+    }
+  </script>
 
-precision mediump float;
+  <script id="fragment-shader" type="x-shader/x-fragment">
 
-varying vec4 fColor;
+    precision mediump float;
 
-void
-main()
-{
-    gl_FragColor = fColor;
-}
-</script>
+    //varying vec4 fColor;
+    varying vec2 fTexCoord;
 
-<script type="text/javascript" src="./Common/webgl-utils.js"></script>
-<script type="text/javascript" src="./Common/initShaders.js"></script>
-<script type="text/javascript" src="./Common/MV.js"></script>
-<script type="text/javascript" src="asteroids.js"></script>
+    uniform sampler2D texture;
 
-<style>@media print {#ghostery-purple-box {display:none !important}}</style></head><body>
-<canvas id="gl-canvas" width="512" "="" height="512">
-Oops ... your browser doesn't support the HTML5 canvas element
-</canvas>
-
-<br>
+    void
+    main(){
+//    gl_FragColor = fColor * texture2D( texture, fTexCoord );
+      gl_FragColor = texture2D( texture, fTexCoord );
+    }
+  </script>
 
 
+  <script type="text/javascript" src="../Common/webgl-utils.js"></script>
+  <script type="text/javascript" src="../Common/initShaders.js"></script>
+  <script type="text/javascript" src="../Common/MV.js"></script>
+  <script type="text/javascript" src="asteroids.js"></script>
 
-</body></html>
+
+  </head>
+  <body>
+    <canvas id="gl-canvas" width="800" height="800">
+      Oops ... your browser doesn't support the HTML5 canvas element
+    </canvas>
+
+    <img id="VeggImage" src="/img/brick.jpg" hidden="">
+    <img id="GolfImage" src="/img/planks.jpg" hidden="">
+  </body>
+</html>
