@@ -1,63 +1,59 @@
-var canvas;
-var gl;
+let canvas;
+let gl;
 
-var numVertices  = 6;
+const numVertices  = 6;
 
-var program;
+let program;
 
-var pointsArray = [];
-var colorsArray = [];
-var texCoordsArray = [];
+let pointsArray = [];
+let colorsArray = [];
+let texCoordsArray = [];
 
-var texture;
-var texVegg;
-var texGolf;
+let texture;
+let wallTexture;
 
-// Breytur fyrir hreyfingu áhorfanda
-var userXPos = 0.0;
-var userZPos = 2.0;
-var userIncr = 0.1;        // Size of forward/backward step
-var userAngle = 270.0;     // Direction of the user in degrees
-var userXDir = 0.0;        // X-coordinate of heading
-var userZDir = -1.0;       // Z-coordinate of heading
+// Varibles for user view
+const movementSize = 0.5; // Size of forward/backward step
+// How many degrees are added/detracted to heading for each button push
+const degreesPerTurn = 10.0;
+// Half the height of the bounding cube
+const boundaryRadius = 10.0;
+const playerBoundingRadius = 0.5;
+// Indicates how far an object is displaced if it goes out of bounds.
+// 0.1 added so the displacement does not place object out of bounds
+// in the other direction
+const displacement = 2*boundaryRadius - 2*(playerBoundingRadius + 0.1);
+let player;
 
-var movement = false;
-var spinX = 0;
-var spinY = 0;
-var origX;
-var origY;
+let proLoc;
+let mvLoc;
 
-var zDist = -5.0;
-
-var proLoc;
-var mvLoc;
-
-// Hnútar veggsins
-var vertices = [
-  vec4( -5.0,  0.0, 0.0, 1.0 ),
-  vec4(  5.0,  0.0, 0.0, 1.0 ),
-  vec4(  5.0,  1.0, 0.0, 1.0 ),
-  vec4(  5.0,  1.0, 0.0, 1.0 ),
-  vec4( -5.0,  1.0, 0.0, 1.0 ),
-  vec4( -5.0,  0.0, 0.0, 1.0 ),
-// Hnútar gólfsins (strax á eftir)
-  vec4( -5.0,  0.0, 10.0, 1.0 ),
-  vec4(  5.0,  0.0, 10.0, 1.0 ),
-  vec4(  5.0,  0.0,  0.0, 1.0 ),
-  vec4(  5.0,  0.0,  0.0, 1.0 ),
-  vec4( -5.0,  0.0,  0.0, 1.0 ),
-  vec4( -5.0,  0.0, 10.0, 1.0 )
+// Vertices for boundary box for game
+let vertices = [
+  vec4( -10.0,  -10.0, -10.0, 1.0 ),
+  vec4(  10.0,  -10.0, -10.0, 1.0 ),
+  vec4(  10.0,  10.0, -10.0, 1.0 ),
+  vec4(  10.0,  10.0, -10.0, 1.0 ),
+  vec4( -10.0,  10.0, -10.0, 1.0 ),
+  vec4( -10.0,  -10.0, -10.0, 1.0 ),
+//
+  vec4( -10.0,  -10.0,  10.0, 1.0 ),
+  vec4(  10.0,  -10.0,  10.0, 1.0 ),
+  vec4(  10.0,  -10.0, -10.0, 1.0 ),
+  vec4(  10.0,  -10.0, -10.0, 1.0 ),
+  vec4( -10.0,  -10.0, -10.0, 1.0 ),
+  vec4( -10.0,  -10.0,  10.0, 1.0 )
 ];
 
-// Mynsturhnit fyrir vegg
-var texCoords = [
-  vec2(  0.0, 0.0 ),
-  vec2( 10.0, 0.0 ),
-  vec2( 10.0, 1.0 ),
-  vec2( 10.0, 1.0 ),
-  vec2(  0.0, 1.0 ),
-  vec2(  0.0, 0.0 ),
-// Mynsturhnit fyrir gólf
+// Texture co-ordinates for boundary box
+let texCoords = [
+  vec2(  0.0,  0.0 ),
+  vec2( 5.0,  0.0 ),
+  vec2( 5.0, 5.0 ),
+  vec2( 5.0, 5.0 ),
+  vec2(  0.0, 5.0 ),
+  vec2(  0.0,  0.0 ),
+  //
   vec2(  0.0,  0.0 ),
   vec2( 10.0,  0.0 ),
   vec2( 10.0, 10.0 ),
@@ -66,6 +62,137 @@ var texCoords = [
   vec2(  0.0,  0.0 )
 ];
 
+// Corners of the box bounding the player's ship
+let playerBoundingBox = [
+  vec3(-0.5, 0.5, 0.5),
+  vec3(0.5, 0.5, 0.5),
+  vec3(-0.5, 0.5, -0.5),
+  vec3(0.5, 0.5, -0.5),
+  //
+  vec3(-0.5, -0.5, 0.5),
+  vec3(0.5, -0.5, 0.5),
+  vec3(-0.5, -0.5, -0.5),
+  vec3(0.5, -0.5, -0.5)
+];
+
+// The position variable contains the (x,y,z) co-ordinates of the viewer,
+// direction contains the (x,y,z) vector components of the heading and angles
+// contains the heading of the viewer where angles[0] is theta and angles[1]
+// is phi.
+class Ship {
+  constructor(position, direction, angles, boundingBox){
+    this.position = position;
+    this.direction = direction;
+    this.angles = angles;
+    this.boundingBox = boundingBox;
+  }
+
+  addToTheta(theta){
+    let tmp = this.angles[0] + theta;
+    tmp %= 360.0;
+    // Catches cases where normalization would cause an error
+    if(tmp == 360.0 || tmp == 0.0)
+      tmp += 0.01;
+    this.angles[0] = tmp;
+    this.recalculateDirection();
+  }
+
+  addToPhi(phi){
+    let tmp = (this.angles[1] + phi) % 360.0;
+    this.angles[1] = tmp;
+    this.recalculateDirection();
+  }
+
+  // Moves the viewer by dist in the current heading
+  addMovement(dist){
+    this.position[0] += dist * this.direction[0];
+    this.position[1] += dist * this.direction[1];
+    this.position[2] += dist * this.direction[2];
+    for (var i = 0; i < this.boundingBox.length; i++) {
+      this.boundingBox[i][0] += dist * this.direction[0];
+      this.boundingBox[i][1] += dist * this.direction[1];
+      this.boundingBox[i][2] += dist * this.direction[2];
+    }
+  }
+
+  // Calculate a new direction vector for heading
+  recalculateDirection(){
+    this.direction[0] = Math.sin(radians(this.angles[0])) * Math.cos(radians(this.angles[1]));
+    this.direction[1] = Math.cos(radians(this.angles[0]));
+    this.direction[2] = Math.sin(radians(this.angles[0])) * Math.sin(radians(this.angles[1]));
+  }
+
+  // Displaces the viewer by x, y, z and moves the bounding box as well
+  displace(x, y, z){
+    this.position[0] += x;
+    this.position[1] += y;
+    this.position[2] += z;
+    for (var i = 0; i < this.boundingBox.length; i++) {
+      this.boundingBox[i][0] += x;
+      this.boundingBox[i][1] += y;
+      this.boundingBox[i][2] += z;
+    }
+  }
+
+  // getters
+  get positionX() {
+    return this.position[0];
+  }
+  get positionY() {
+    return this.position[1];
+  }
+  get positionZ() {
+    return this.position[2];
+  }
+  get theta(){
+    return this.angles[0];
+  }
+  get phi(){
+    return this.angles[1];
+  }
+  get directionX() {
+    return this.direction[0];
+  }
+  get directionY() {
+    return this.direction[1];
+  }
+  get directionZ() {
+    return this.direction[2];
+  }
+  get positionVector(){
+    return vec3(this.position[0], this.position[1], this.position[2]);
+  }
+  get eyeVector(){
+    return vec3(this.position[0] + this.direction[0],
+      this.position[1] + this.direction[1],
+      this.position[2] + this.direction[2]);
+  }
+  // setters
+  set setPositionX(x) {
+    this.position[0] = x;
+  }
+  set setPositionY(y) {
+    this.position[1] = y;
+  }
+  set setPositionZ(z) {
+    this.position[2] = z;
+  }
+  set setTheta(theta){
+    this.angles[0] = theta;
+  }
+  set setPhi(phi){
+    this.angles[1] = phi;
+  }
+  set setDirectionX(x) {
+    this.direction[0] = x;
+  }
+  set setDirectionY(y) {
+    this.direction[1] = y;
+  }
+  set setDirectionZ(z) {
+    this.direction[2] = z;
+  }
+}
 
 window.onload = function init() {
 
@@ -83,26 +210,26 @@ window.onload = function init() {
   program = initShaders( gl, "vertex-shader", "fragment-shader" );
   gl.useProgram( program );
 
-  var vBuffer = gl.createBuffer();
+  let vBuffer = gl.createBuffer();
   gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
   gl.bufferData( gl.ARRAY_BUFFER, flatten(vertices), gl.STATIC_DRAW );
 
-  var vPosition = gl.getAttribLocation( program, "vPosition" );
+  let vPosition = gl.getAttribLocation( program, "vPosition" );
   gl.vertexAttribPointer( vPosition, 4, gl.FLOAT, false, 0, 0 );
   gl.enableVertexAttribArray( vPosition );
 
-  var tBuffer = gl.createBuffer();
+  let tBuffer = gl.createBuffer();
   gl.bindBuffer( gl.ARRAY_BUFFER, tBuffer );
   gl.bufferData( gl.ARRAY_BUFFER, flatten(texCoords), gl.STATIC_DRAW );
 
-  var vTexCoord = gl.getAttribLocation( program, "vTexCoord" );
+  let vTexCoord = gl.getAttribLocation( program, "vTexCoord" );
   gl.vertexAttribPointer( vTexCoord, 2, gl.FLOAT, false, 0, 0 );
   gl.enableVertexAttribArray( vTexCoord );
 
-  // Lesa inn og skilgreina mynstur fyrir vegg
-  var veggImage = document.getElementById("VeggImage");
-  texVegg = gl.createTexture();
-  gl.bindTexture( gl.TEXTURE_2D, texVegg );
+  // Read wall image and load it into buffer
+  let veggImage = document.getElementById("VeggImage");
+  wallTexture = gl.createTexture();
+  gl.bindTexture( gl.TEXTURE_2D, wallTexture );
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
   gl.texImage2D( gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, veggImage );
   gl.generateMipmap( gl.TEXTURE_2D );
@@ -111,27 +238,16 @@ window.onload = function init() {
 
   gl.uniform1i(gl.getUniformLocation(program, "texture"), 0);
 
-  // Lesa inn og skilgreina mynstur fyrir gólf
-  var golfImage = document.getElementById("GolfImage");
-  texGolf = gl.createTexture();
-  gl.bindTexture( gl.TEXTURE_2D, texGolf );
-  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-  gl.texImage2D( gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, golfImage );
-  gl.generateMipmap( gl.TEXTURE_2D );
-  gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR );
-  gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR );
-
-  gl.uniform1i(gl.getUniformLocation(program, "texture"), 0);
-
-
   proLoc = gl.getUniformLocation( program, "projection" );
   mvLoc = gl.getUniformLocation( program, "modelview" );
 
-  var proj = perspective( 50.0, 1.0, 0.2, 100.0 );
+  let proj = perspective( 50.0, 1.0, 0.2, 100.0 );
   gl.uniformMatrix4fv(proLoc, false, flatten(proj));
 
+  player = new Ship([0.0, 0.0, 0.0], [0.0, 0.0, -1.0], [270.0, 90.0], playerBoundingBox);
 
   // Event listeners for mouse
+  /*
   canvas.addEventListener("mousedown", function(e){
     movement = true;
     origX = e.clientX;
@@ -143,63 +259,80 @@ window.onload = function init() {
 
   canvas.addEventListener("mousemove", function(e){
     if(movement) {
-      userAngle += 0.4*(origX - e.clientX);
-      userAngle %= 360.0;
-      userXDir = Math.cos( radians(userAngle) );
-      userZDir = Math.sin( radians(userAngle) );
+      userAngleY += 0.4*(origX - e.clientX);
+      userAngleY %= 360.0;
+      userXDir = Math.cos(radians(userAngleX));
+      userYDir = Math.cos(radians(userAngleY));
+      userZDir = Math.sin(radians(userAngleX));
       origX = e.clientX;
     }
   });
+  */
 
   // Event listener for keyboard
    window.addEventListener("keydown", function(e){
-     switch( e.keyCode ) {
+     switch(e.keyCode) {
       case 87:	// w
-        userXPos += userIncr * userXDir;
-        userZPos += userIncr * userZDir;;
+        player.addToTheta(degreesPerTurn);
         break;
       case 83:	// s
-        userXPos -= userIncr * userXDir;
-        userZPos -= userIncr * userZDir;;
+      player.addToTheta(-degreesPerTurn);
         break;
       case 65:	// a
-        userXPos += userIncr * userZDir;
-        userZPos -= userIncr * userXDir;;
+        player.addToPhi(-degreesPerTurn);
         break;
       case 68:	// d
-        userXPos -= userIncr * userZDir;
-        userZPos += userIncr * userXDir;;
+        player.addToPhi(degreesPerTurn);
         break;
-     }
-   });
-
-  // Event listener for mousewheel
-   window.addEventListener("mousewheel", function(e){
-     if( e.wheelDelta > 0.0 ) {
-       zDist += 0.2;
-     } else {
-       zDist -= 0.2;
+      case 73 :  // i
+        player.addMovement(movementSize);
+        break;
+      case 75 :  // k
+        player.addMovement(-movementSize);
+        break;
      }
    });
 
   render();
 }
 
-var render = function(){
+// Checks if the object is within bounds
+function checkIfObjectInBounds(object){
+  let boxPoints = object.boundingBox;
+  for (var i = 0; i < boxPoints.length; i++) {
+    let point = boxPoints[i];
+    if (point[0] <= -boundaryRadius) {
+      object.displace(displacement, 0, 0);
+    } else if (point[0] >= boundaryRadius) {
+      object.displace(-displacement, 0, 0);
+    } else if (point[1] <= -boundaryRadius) {
+      object.displace(0, displacement, 0);
+    } else if (point[1] >= boundaryRadius) {
+      object.displace(0, -displacement, 0);
+    } else if (point[2] <= -boundaryRadius) {
+      object.displace(0, 0, displacement);
+    } else if (point[2] >= boundaryRadius) {
+      object.displace(0, 0, -displacement);
+    }
+  }
+}
+
+let render = function(){
   gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  // staðsetja áhorfanda og meðhöndla músarhreyfingu
-  var mv = lookAt( vec3(userXPos, 0.5, userZPos), vec3(userXPos+userXDir, 0.5, userZPos+userZDir), vec3(0.0, 1.0, 0.0 ) );
+  // Positon viewer
+  let mv = lookAt(player.positionVector, player.eyeVector, vec3(0.0, 1.0, 0.0 ));
+
+  checkIfObjectInBounds(player);
 
   gl.uniformMatrix4fv(mvLoc, false, flatten(mv));
 
-  // Teikna vegg með mynstri
-  gl.bindTexture( gl.TEXTURE_2D, texVegg );
-  gl.drawArrays( gl.TRIANGLES, 0, numVertices );
+  gl.bindTexture(gl.TEXTURE_2D, wallTexture);
+  for (var i = 0; (i*numVertices) < vertices.length; i++) {
+    gl.drawArrays(gl.TRIANGLES, i*numVertices, numVertices);
+  }
 
-  // Teikna gólf með mynstri
-  gl.bindTexture( gl.TEXTURE_2D, texGolf );
-  gl.drawArrays( gl.TRIANGLES, numVertices, numVertices );
+  //gl.drawArrays(gl.TRIANGLES, numVertices, numVertices);
 
   requestAnimFrame(render);
 }
