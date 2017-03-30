@@ -16,6 +16,13 @@ let wallTexture;
 const movementSize = 0.5; // Size of forward/backward step
 // How many degrees are added/detracted to heading for each button push
 const degreesPerTurn = 10.0;
+// Half the height of the bounding cube
+const boundaryRadius = 10.0;
+const playerBoundingRadius = 0.5;
+// Indicates how far an object is displaced if it goes out of bounds.
+// 0.1 added so the displacement does not place object out of bounds
+// in the other direction
+const displacement = 2*boundaryRadius - 2*(playerBoundingRadius + 0.1);
 let player;
 
 let proLoc;
@@ -48,14 +55,14 @@ let texCoords = [
   vec2(  0.0,  0.0 ),
   //
   vec2(  0.0,  0.0 ),
-  vec2( 5.0,  0.0 ),
-  vec2( 5.0, 5.0 ),
-  vec2( 5.0, 5.0 ),
-  vec2(  0.0, 5.0 ),
+  vec2( 10.0,  0.0 ),
+  vec2( 10.0, 10.0 ),
+  vec2( 10.0, 10.0 ),
+  vec2(  0.0, 10.0 ),
   vec2(  0.0,  0.0 )
 ];
 
-// Coreners of the box bounding the player's ship
+// Corners of the box bounding the player's ship
 let playerBoundingBox = [
   vec3(-0.5, 0.5, 0.5),
   vec3(0.5, 0.5, 0.5),
@@ -82,10 +89,10 @@ class Ship {
 
   addToTheta(theta){
     let tmp = this.angles[0] + theta;
+    tmp %= 360.0;
     // Catches cases where normalization would cause an error
     if(tmp == 360.0 || tmp == 0.0)
       tmp += 0.01;
-    tmp %= 360.0;
     this.angles[0] = tmp;
     this.recalculateDirection();
   }
@@ -113,6 +120,18 @@ class Ship {
     this.direction[0] = Math.sin(radians(this.angles[0])) * Math.cos(radians(this.angles[1]));
     this.direction[1] = Math.cos(radians(this.angles[0]));
     this.direction[2] = Math.sin(radians(this.angles[0])) * Math.sin(radians(this.angles[1]));
+  }
+
+  // Displaces the viewer by x, y, z and moves the bounding box as well
+  displace(x, y, z){
+    this.position[0] += x;
+    this.position[1] += y;
+    this.position[2] += z;
+    for (var i = 0; i < this.boundingBox.length; i++) {
+      this.boundingBox[i][0] += x;
+      this.boundingBox[i][1] += y;
+      this.boundingBox[i][2] += z;
+    }
   }
 
   // getters
@@ -263,7 +282,7 @@ window.onload = function init() {
         player.addToPhi(-degreesPerTurn);
         break;
       case 68:	// d
-      player.addToPhi(degreesPerTurn);
+        player.addToPhi(degreesPerTurn);
         break;
       case 73 :  // i
         player.addMovement(movementSize);
@@ -277,11 +296,34 @@ window.onload = function init() {
   render();
 }
 
+// Checks if the object is within bounds
+function checkIfObjectInBounds(object){
+  let boxPoints = object.boundingBox;
+  for (var i = 0; i < boxPoints.length; i++) {
+    let point = boxPoints[i];
+    if (point[0] <= -boundaryRadius) {
+      object.displace(displacement, 0, 0);
+    } else if (point[0] >= boundaryRadius) {
+      object.displace(-displacement, 0, 0);
+    } else if (point[1] <= -boundaryRadius) {
+      object.displace(0, displacement, 0);
+    } else if (point[1] >= boundaryRadius) {
+      object.displace(0, -displacement, 0);
+    } else if (point[2] <= -boundaryRadius) {
+      object.displace(0, 0, displacement);
+    } else if (point[2] >= boundaryRadius) {
+      object.displace(0, 0, -displacement);
+    }
+  }
+}
+
 let render = function(){
   gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   // Positon viewer
   let mv = lookAt(player.positionVector, player.eyeVector, vec3(0.0, 1.0, 0.0 ));
+
+  checkIfObjectInBounds(player);
 
   gl.uniformMatrix4fv(mvLoc, false, flatten(mv));
 
