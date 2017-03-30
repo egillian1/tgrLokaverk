@@ -13,21 +13,15 @@ let texture;
 let wallTexture;
 
 // Varibles for user view
-let userXPos = 0.0;
-let userYPos = 0.0;
-let userZPos = 0.0;
-const userIncr = 0.1; // Size of forward/backward step
-let userAngleX = 270.0; // X-direction of the user in degrees
-let userAngleY = 90.0; // Y-direction of the user in degrees
-let userXDir = 0.0; // X-coordinate of heading
-let userYDir = 0.0; // Y-coordinate of heading
-let userZDir = -1.0; // Z-coordinate of heading
-const degreesPerTurn = 5.0; // How many degrees are added/detracted for each button push
+const movementSize = 0.5; // Size of forward/backward step
+// How many degrees are added/detracted to heading for each button push
+const degreesPerTurn = 10.0;
+let player;
 
 let proLoc;
 let mvLoc;
 
-// Vertices for boundary box
+// Vertices for boundary box for game
 let vertices = [
   vec4( -10.0,  -10.0, -10.0, 1.0 ),
   vec4(  10.0,  -10.0, -10.0, 1.0 ),
@@ -58,9 +52,128 @@ let texCoords = [
   vec2( 5.0, 5.0 ),
   vec2( 5.0, 5.0 ),
   vec2(  0.0, 5.0 ),
-  vec2(  0.0,  0.0 ),
+  vec2(  0.0,  0.0 )
 ];
 
+// Coreners of the box bounding the player's ship
+let playerBoundingBox = [
+  vec3(-0.5, 0.5, 0.5),
+  vec3(0.5, 0.5, 0.5),
+  vec3(-0.5, 0.5, -0.5),
+  vec3(0.5, 0.5, -0.5),
+  //
+  vec3(-0.5, -0.5, 0.5),
+  vec3(0.5, -0.5, 0.5),
+  vec3(-0.5, -0.5, -0.5),
+  vec3(0.5, -0.5, -0.5)
+];
+
+// The position variable contains the (x,y,z) co-ordinates of the viewer,
+// direction contains the (x,y,z) vector components of the heading and angles
+// contains the heading of the viewer where angles[0] is theta and angles[1]
+// is phi.
+class Ship {
+  constructor(position, direction, angles, boundingBox){
+    this.position = position;
+    this.direction = direction;
+    this.angles = angles;
+    this.boundingBox = boundingBox;
+  }
+
+  addToTheta(theta){
+    let tmp = this.angles[0] + theta;
+    // Catches cases where normalization would cause an error
+    if(tmp == 360.0 || tmp == 0.0)
+      tmp += 0.01;
+    tmp %= 360.0;
+    this.angles[0] = tmp;
+    this.recalculateDirection();
+  }
+
+  addToPhi(phi){
+    let tmp = (this.angles[1] + phi) % 360.0;
+    this.angles[1] = tmp;
+    this.recalculateDirection();
+  }
+
+  // Moves the viewer by dist in the current heading
+  addMovement(dist){
+    this.position[0] += dist * this.direction[0];
+    this.position[1] += dist * this.direction[1];
+    this.position[2] += dist * this.direction[2];
+    for (var i = 0; i < this.boundingBox.length; i++) {
+      this.boundingBox[i][0] += dist * this.direction[0];
+      this.boundingBox[i][1] += dist * this.direction[1];
+      this.boundingBox[i][2] += dist * this.direction[2];
+    }
+  }
+
+  // Calculate a new direction vector for heading
+  recalculateDirection(){
+    this.direction[0] = Math.sin(radians(this.angles[0])) * Math.cos(radians(this.angles[1]));
+    this.direction[1] = Math.cos(radians(this.angles[0]));
+    this.direction[2] = Math.sin(radians(this.angles[0])) * Math.sin(radians(this.angles[1]));
+  }
+
+  // getters
+  get positionX() {
+    return this.position[0];
+  }
+  get positionY() {
+    return this.position[1];
+  }
+  get positionZ() {
+    return this.position[2];
+  }
+  get theta(){
+    return this.angles[0];
+  }
+  get phi(){
+    return this.angles[1];
+  }
+  get directionX() {
+    return this.direction[0];
+  }
+  get directionY() {
+    return this.direction[1];
+  }
+  get directionZ() {
+    return this.direction[2];
+  }
+  get positionVector(){
+    return vec3(this.position[0], this.position[1], this.position[2]);
+  }
+  get eyeVector(){
+    return vec3(this.position[0] + this.direction[0],
+      this.position[1] + this.direction[1],
+      this.position[2] + this.direction[2]);
+  }
+  // setters
+  set setPositionX(x) {
+    this.position[0] = x;
+  }
+  set setPositionY(y) {
+    this.position[1] = y;
+  }
+  set setPositionZ(z) {
+    this.position[2] = z;
+  }
+  set setTheta(theta){
+    this.angles[0] = theta;
+  }
+  set setPhi(phi){
+    this.angles[1] = phi;
+  }
+  set setDirectionX(x) {
+    this.direction[0] = x;
+  }
+  set setDirectionY(y) {
+    this.direction[1] = y;
+  }
+  set setDirectionZ(z) {
+    this.direction[2] = z;
+  }
+}
 
 window.onload = function init() {
 
@@ -94,7 +207,7 @@ window.onload = function init() {
   gl.vertexAttribPointer( vTexCoord, 2, gl.FLOAT, false, 0, 0 );
   gl.enableVertexAttribArray( vTexCoord );
 
-  // Lesa inn og skilgreina mynstur fyrir vegg
+  // Read wall image and load it into buffer
   let veggImage = document.getElementById("VeggImage");
   wallTexture = gl.createTexture();
   gl.bindTexture( gl.TEXTURE_2D, wallTexture );
@@ -112,6 +225,7 @@ window.onload = function init() {
   let proj = perspective( 50.0, 1.0, 0.2, 100.0 );
   gl.uniformMatrix4fv(proLoc, false, flatten(proj));
 
+  player = new Ship([0.0, 0.0, 0.0], [0.0, 0.0, -1.0], [270.0, 90.0], playerBoundingBox);
 
   // Event listeners for mouse
   /*
@@ -140,41 +254,22 @@ window.onload = function init() {
    window.addEventListener("keydown", function(e){
      switch(e.keyCode) {
       case 87:	// w
-        userAngleX += degreesPerTurn;
-        if(userAngleX == 360.0)
-          userAngleX += 0.5;
-        userAngleX %= 360.0;
-        userXDir = Math.sin(radians(userAngleX)) * Math.cos(radians(userAngleY));
-        userYDir = Math.cos(radians(userAngleX));
-        userZDir = Math.sin(radians(userAngleX)) * Math.sin(radians(userAngleY));
+        player.addToTheta(degreesPerTurn);
         break;
       case 83:	// s
-        userAngleX -= degreesPerTurn;
-        if(userAngleX == 0.0)
-          userAngleX -= 0.5;
-        userAngleX %= 360.0;
-        userXDir = Math.sin(radians(userAngleX)) * Math.cos(radians(userAngleY));
-        userYDir = Math.cos(radians(userAngleX));
-        userZDir = Math.sin(radians(userAngleX)) * Math.sin(radians(userAngleY));
+      player.addToTheta(-degreesPerTurn);
         break;
       case 65:	// a
-        userAngleY -= degreesPerTurn;
-        userAngleY %= 360.0;
-        userXDir = Math.sin(radians(userAngleX)) * Math.cos(radians(userAngleY));
-        userYDir = Math.cos(radians(userAngleX));
-        userZDir = Math.sin(radians(userAngleX)) * Math.sin(radians(userAngleY));
+        player.addToPhi(-degreesPerTurn);
         break;
       case 68:	// d
-        userAngleY += degreesPerTurn;
-        userAngleY %= 360.0;
-        userXDir = Math.sin(radians(userAngleX)) * Math.cos(radians(userAngleY));
-        userYDir = Math.cos(radians(userAngleX));
-        userZDir = Math.sin(radians(userAngleX)) * Math.sin(radians(userAngleY));
+      player.addToPhi(degreesPerTurn);
         break;
-      case 74:  // ctrl
-        userXPos += userIncr * userXDir;
-        userYPos += userIncr * userYDir
-        userZPos += userIncr * userZDir;
+      case 73 :  // i
+        player.addMovement(movementSize);
+        break;
+      case 75 :  // k
+        player.addMovement(-movementSize);
         break;
      }
    });
@@ -186,9 +281,7 @@ let render = function(){
   gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   // Positon viewer
-  let mv = lookAt(vec3(userXPos, userYPos, userZPos),
-  vec3(userXPos+userXDir, userYPos+userYDir, userZPos+userZDir),
-  vec3(0.0, 1.0, 0.0 ));
+  let mv = lookAt(player.positionVector, player.eyeVector, vec3(0.0, 1.0, 0.0 ));
 
   gl.uniformMatrix4fv(mvLoc, false, flatten(mv));
 
