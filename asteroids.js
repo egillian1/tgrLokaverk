@@ -1,15 +1,3 @@
-/////////////////////////////////////////////////////////////////
-//    Sýnidæmi í Tölvugrafík
-//     Einu mynstri varpað á tening.  Hægt að snúa honum með
-//     músinni og færa til með upp- og niður-örvum (eða músarhjóli).
-//
-//    Hjálmtýr Hafsteinsson, mars 2017
-/////////////////////////////////////////////////////////////////
-
-
-
-
-
 let canvas;
 let gl;
 
@@ -40,6 +28,14 @@ let zDist = -4.0;
 
 let proLoc;
 let mvLoc;
+
+
+// AUDIO
+
+let explosionSound = new Audio("audio/explosion.wav");
+let spaceShip      = new Audio("audio/Airplane_Rocket_Close.mp3");
+let laserSound     = new Audio("audio/Laser_Gun.mp3");
+let ufoSound       = new Audio("audio/Spaceship_Alarm.mp3");
 
 
 // Varibles for user view
@@ -351,6 +347,7 @@ window.onload = function init()
                 break;
             case 73: // i
                 player.addMovement(movementSize);
+                spaceshipSound.play();
                 break;
             case 75: // k
                 player.addMovement(-movementSize);
@@ -434,6 +431,7 @@ function quad(a, b, c, d)
 
 function explodeAsteroid(asteroid){
   asteroid.registerHit();
+  explosionSound.play();
   if (asteroid.health != 0) {
     for (let i = 0; i < 3; i++) {
       asteroids.push(new Asteroid({x: asteroid.coords.x, y: asteroid.coords.y, z: asteroid.coords.z}, asteroid.health));
