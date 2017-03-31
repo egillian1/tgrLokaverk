@@ -1,17 +1,46 @@
+/////////////////////////////////////////////////////////////////
+//    Sýnidæmi í Tölvugrafík
+//     Einu mynstri varpað á tening.  Hægt að snúa honum með
+//     músinni og færa til með upp- og niður-örvum (eða músarhjóli).
+//
+//    Hjálmtýr Hafsteinsson, mars 2017
+/////////////////////////////////////////////////////////////////
+
+
+
+
+
 let canvas;
 let gl;
 
-const numVertices = 6;
+let NumVertices  = 36;
 
 let program;
+let texture;
 
-let pointsArray = [];
-let colorsArray = [];
-let texCoordsArray = [];
+let points = [];
+let texCoords = [];
 let asteroids = [];
 
-let texture;
-let wallTexture;
+
+let xAxis = 0;
+let yAxis = 1;
+let zAxis = 2;
+
+let axis = 0;
+let theta = [ 0, 0, 0 ];
+
+let movement = false;     // Do we rotate?
+let spinX = 0;
+let spinY = 0;
+let origX;
+let origY;
+
+let zDist = -4.0;
+
+let proLoc;
+let mvLoc;
+
 
 // Varibles for user view
 const movementSize = 0.5; // Size of forward/backward step
@@ -20,93 +49,82 @@ const degreesPerTurn = 10.0;
 // Half the height of the bounding asteroid
 const boundaryRadius = 10.0;
 const playerBoundingRadius = 0.5;
-const MAX_HEALTH = 3;
-// Indicates how far an object is displaced if it goes out of bounds.
-// 0.1 added so the displacement does not place object out of bounds
-// in the other direction
-const displacement = 2 * boundaryRadius - 2 * (playerBoundingRadius + 0.1);
-let player;
 
-let proLoc;
-let mvLoc;
+const displacement = 2 * boundaryRadius - 2 * (playerBoundingRadius + 0.1);
+
+
+const MAX_HEALTH = 3;
 
 class Asteroid {
-    constructor(coords, health) {
-        this.coords = coords;
-        this.health = health;
-        this.size = health / MAX_HEALTH;
-        this.bounds = {
-            back: coords.z - this.size,
-            front: coords.z + this.size,
-            top: coords.y - this.size,
-            bottom: coords.y + this.size,
-            left: coords.x - this.size,
-            right: coords.x + this.size
-        };
-        this.speed = this.createRandomSpeed();
-        this.direction = this.createRandomDirection();
+  constructor(coords, health) {
+    this.coords = coords;
+    this.health = health;
+    this.size = health/MAX_HEALTH;
+    this.bounds = {
+      back: coords.z-this.size,
+      front:  coords.z+this.size,
+      top: coords.y-this.size,
+      bottom:  coords.y+this.size,
+      left: coords.x-this.size,
+      right: coords.x+this.size
     };
+    this.speed = this.createRandomSpeed();
+    this.direction = this.createRandomDirection();
+  };
 
-    get getCoords() {
-        return this.coords;
+  get getCoords(){
+    return this.coords;
+  }
+
+  set updateCoords(coords){
+    this.coords = coords;
+  }
+
+  get getSpeed(){
+    return this.speed;
+  }
+
+  get getDirection(){
+    return this.direction;
+  }
+
+  createRandomSpeed(){
+    let max = 0.002;
+    let min = 0.0001;
+
+    let dx = Math.random() * (max - min) + min;
+    let dy = Math.random() * (max - min) + min;
+    let dz = Math.random() * (max - min) + min;
+
+    return {dx: dx, dy: dy, dz:dz};
+  }
+
+  createRandomDirection(){
+    let prob = 0.5;
+    return {
+      xdir: Math.random() > prob ? 1 : -1,
+      ydir: Math.random() > prob ? 1 : -1,
+      zdir: Math.random() > prob ? 1 : -1
     }
+  }
 
-    set updateCoords(coords) {
-        this.coords = coords;
-    }
+  registerHit(){
+    if(this.health == 0) return;
+    this.health--;
+    this.size = this.health/MAX_HEALTH;
+    this.updateBounds();
+  }
 
-    get getSpeed() {
-        return this.speed;
-    }
-
-    get getDirection() {
-        return this.direction;
-    }
-
-    createRandomSpeed() {
-        var max = 0.002;
-        var min = 0.0001;
-
-        var dx = Math.random() * (max - min) + min;
-        var dy = Math.random() * (max - min) + min;
-        var dz = Math.random() * (max - min) + min;
-
-        return {dx: dx, dy: dy, dz: dz};
-    }
-
-    createRandomDirection() {
-        var prob = 0.5;
-        return {
-            xdir: Math.random() > prob
-                ? 1
-                : -1,
-            ydir: Math.random() > prob
-                ? 1
-                : -1,
-            zdir: Math.random() > prob
-                ? 1
-                : -1
-        }
-    }
-
-    registerHit() {
-        if (this.health == 0)
-            return;
-        this.health--;
-        this.size = this.health / MAX_HEALTH;
-        this.updateBounds();
-    }
-
-    updateBounds() {
-        this.bounds = {
-            back: this.coords.z - this.size,
-            front: this.coords.z + this.size,
-            top: this.coords.y - this.size,
-            bottom: this.coords.y + this.size,
-            left: this.coords.x - this.size,
-            right: this.coords.x + this.size
-        }
-    }
+  updateBounds(){
+    this.bounds = {
+    back: this.coords.z-this.size,
+    front:  this.coords.z+this.size,
+    top: this.coords.y-this.size,
+    bottom:  this.coords.y+this.size,
+    left: this.coords.x-this.size,
+    right: this.coords.x+this.size
+  }
+}
 }
 
 // The position variable contains the (x,y,z) co-ordinates of the viewer,
@@ -142,7 +160,7 @@ class Ship {
         this.position[0] += dist * this.direction[0];
         this.position[1] += dist * this.direction[1];
         this.position[2] += dist * this.direction[2];
-        for (var i = 0; i < this.boundingBox.length; i++) {
+        for (let i = 0; i < this.boundingBox.length; i++) {
             this.boundingBox[i][0] += dist * this.direction[0];
             this.boundingBox[i][1] += dist * this.direction[1];
             this.boundingBox[i][2] += dist * this.direction[2];
@@ -161,7 +179,7 @@ class Ship {
         this.position[0] += x;
         this.position[1] += y;
         this.position[2] += z;
-        for (var i = 0; i < this.boundingBox.length; i++) {
+        for (let i = 0; i < this.boundingBox.length; i++) {
             this.boundingBox[i][0] += x;
             this.boundingBox[i][1] += y;
             this.boundingBox[i][2] += z;
@@ -226,50 +244,7 @@ class Ship {
     }
 }
 
-function configureTexture(image) {
-    texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-    gl.generateMipmap(gl.TEXTURE_2D);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    return texture;
-}
 
-// Vertices for boundary box for game
-let vertices = [
-    vec4(-10.0, -10.0, -10.0, 1.0),
-    vec4(10.0, -10.0, -10.0, 1.0),
-    vec4(10.0, 10.0, -10.0, 1.0),
-    vec4(10.0, 10.0, -10.0, 1.0),
-    vec4(-10.0, 10.0, -10.0, 1.0),
-    vec4(-10.0, -10.0, -10.0, 1.0),
-    //
-    vec4(-10.0, -10.0, 10.0, 1.0),
-    vec4(10.0, -10.0, 10.0, 1.0),
-    vec4(10.0, -10.0, -10.0, 1.0),
-    vec4(10.0, -10.0, -10.0, 1.0),
-    vec4(-10.0, -10.0, -10.0, 1.0),
-    vec4(-10.0, -10.0, 10.0, 1.0)
-];
-
-// Texture co-ordinates for boundary box
-let texCoords = [
-    vec2(0.0, 0.0),
-    vec2(5.0, 0.0),
-    vec2(5.0, 5.0),
-    vec2(5.0, 5.0),
-    vec2(0.0, 5.0),
-    vec2(0.0, 0.0),
-    //
-    vec2(0.0, 0.0),
-    vec2(10.0, 0.0),
-    vec2(10.0, 10.0),
-    vec2(10.0, 10.0),
-    vec2(0.0, 10.0),
-    vec2(0.0, 0.0)
-];
 
 // Corners of the box bounding the player's ship
 let playerBoundingBox = [
@@ -284,137 +259,80 @@ let playerBoundingBox = [
     vec3(0.5, -0.5, -0.5)
 ];
 
-function baseAsteroid() {
-    quad(1, 0, 3, 2);
-    quad(2, 3, 7, 6);
-    quad(3, 0, 4, 7);
-    quad(6, 5, 1, 2);
-    quad(4, 5, 6, 7);
-    quad(5, 4, 0, 1);
+
+function configureTexture( image ) {
+    texture = gl.createTexture();
+    gl.bindTexture( gl.TEXTURE_2D, texture );
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D( gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image );
+    gl.generateMipmap( gl.TEXTURE_2D );
+    gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR );
+    gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR );
 }
 
-function quad(a, b, c, d) {
-    var vert = [
-        vec3(-0.5, -0.5, 0.5),
-        vec3(-0.5, 0.5, 0.5),
-        vec3(0.5, 0.5, 0.5),
-        vec3(0.5, -0.5, 0.5),
-        vec3(-0.5, -0.5, -0.5),
-        vec3(-0.5, 0.5, -0.5),
-        vec3(0.5, 0.5, -0.5),
-        vec3(0.5, -0.5, -0.5)
-    ];
 
-    var texCo = [
-        vec2(0, 0),
-        vec2(0, 1),
-        vec2(1, 1),
-        vec2(1, 0)
-    ];
+window.onload = function init()
+{
+    canvas = document.getElementById( "gl-canvas" );
 
-    //vertex texture coordinates assigned by the index of the vertex
-    var indices = [
-        a,
-        b,
-        c,
-        a,
-        c,
-        d
-    ];
-    var texind = [
-        1,
-        0,
-        3,
-        1,
-        3,
-        2
-    ];
+    gl = WebGLUtils.setupWebGL( canvas );
+    if ( !gl ) { alert( "WebGL isn't available" ); }
 
-    for (var i = 0; i < indices.length; ++i) {
-        vertices.push(vert[indices[i]]);
-        texCoords.push(texCo[texind[i]]);
-    }
-}
+    colorAsteroid();
 
-window.onload = function init() {
+    let asteroid = new Asteroid({x:0, y:0, z:-5}, 2);
+    asteroids.push(asteroid);
+    console.log(asteroids);
 
-    canvas = document.getElementById("gl-canvas");
-
-    gl = WebGLUtils.setupWebGL(canvas);
-    if (!gl) {
-        alert("WebGL isn't available");
-    }
-
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(0.9, 1.0, 1.0, 1.0);
+    gl.viewport( 0, 0, canvas.width, canvas.height );
+    gl.clearColor( 0.8, 0.8, 0.8, 1.0 );
 
     gl.enable(gl.DEPTH_TEST);
 
-    // baseAsteroid();
-
+    //
     //  Load shaders and initialize attribute buffers
-    program = initShaders(gl, "vertex-shader", "fragment-shader");
-    gl.useProgram(program);
+    //
+    let program = initShaders( gl, "vertex-shader", "fragment-shader" );
+    gl.useProgram( program );
 
+/*
+    let cBuffer = gl.createBuffer();
+    gl.bindBuffer( gl.ARRAY_BUFFER, cBuffer );
+    gl.bufferData( gl.ARRAY_BUFFER, flatten(colors), gl.STATIC_DRAW );
+
+    let vColor = gl.getAttribLocation( program, "vColor" );
+    gl.vertexAttribPointer( vColor, 4, gl.FLOAT, false, 0, 0 );
+    gl.enableVertexAttribArray( vColor );
+*/
     let vBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices), gl.STATIC_DRAW);
+    gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
+    gl.bufferData( gl.ARRAY_BUFFER, flatten(points), gl.STATIC_DRAW );
 
-    let vPosition = gl.getAttribLocation(program, "vPosition");
-    gl.vertexAttribPointer(vPosition, 4, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(vPosition);
+    let vPosition = gl.getAttribLocation( program, "vPosition" );
+    gl.vertexAttribPointer( vPosition, 3, gl.FLOAT, false, 0, 0 );
+    gl.enableVertexAttribArray( vPosition );
 
     let tBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, tBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(texCoords), gl.STATIC_DRAW);
+    gl.bindBuffer( gl.ARRAY_BUFFER, tBuffer);
+    gl.bufferData( gl.ARRAY_BUFFER, flatten(texCoords), gl.STATIC_DRAW );
 
-    let vTexCoord = gl.getAttribLocation(program, "vTexCoord");
-    gl.vertexAttribPointer(vTexCoord, 2, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(vTexCoord);
+    let vTexCoord = gl.getAttribLocation( program, "vTexCoord" );
+    gl.vertexAttribPointer( vTexCoord, 2, gl.FLOAT, false, 0, 0 );
+    gl.enableVertexAttribArray( vTexCoord );
 
-    // Read wall image and load it into buffer
-    let veggImage = document.getElementById("VeggImage");
-    wallTexture = configureTexture(veggImage);
+    let image = document.getElementById("texImage");
+    configureTexture( image );
 
+    proLoc = gl.getUniformLocation( program, "projection" );
+    mvLoc = gl.getUniformLocation( program, "modelview" );
     gl.uniform1i(gl.getUniformLocation(program, "texture"), 0);
 
-    proLoc = gl.getUniformLocation(program, "projection");
-    mvLoc = gl.getUniformLocation(program, "modelview");
 
-    let proj = perspective(50.0, 1.0, 0.2, 100.0);
+    let proj = perspective( 50.0, 1.0, 0.2, 100.0 );
     gl.uniformMatrix4fv(proLoc, false, flatten(proj));
 
     player = new Ship([ 0.0, 0.0, 0.0 ], [ 0.0, 0.0, -1.0], [ 270.0, 90.0 ], playerBoundingBox);
-    asteroids.push(new Asteroid({
-        x: 0.5,
-        y: 0.5,
-        z: 0.5
-    }, 3));
 
-    console.log(asteroids);
-
-    // Event listeners for mouse
-    /*
-  canvas.addEventListener("mousedown", function(e){
-    movement = true;
-    origX = e.clientX;
-  });
-
-  canvas.addEventListener("mouseup", function(e){
-    movement = false;
-  });
-
-  canvas.addEventListener("mousemove", function(e){
-    if(movement) {
-      userAngleY += 0.4*(origX - e.clientX);
-      userAngleY %= 360.0;
-      userXDir = Math.cos(radians(userAngleX));
-      userYDir = Math.cos(radians(userAngleY));
-      userZDir = Math.sin(radians(userAngleX));
-      origX = e.clientX;
-    }
-  });
-  */
 
     // Event listener for keyboard
     window.addEventListener("keydown", function(e) {
@@ -437,10 +355,17 @@ window.onload = function init() {
             case 75: // k
                 player.addMovement(-movementSize);
                 break;
+            case 32: // space
+                explodeAsteroid(asteroids[0]);
+                break;
+            default:
+              console.log(e.keyCode);
+              break;
         }
     });
 
-    console.log(vertices);
+
+
     render();
 }
 
@@ -465,49 +390,90 @@ function checkIfObjectInBounds(object) {
     }
 }
 
-function explodeAsteroid(asteroid) {
-    asteroid.registerHit();
-    if (asteroid.health != 0) {
-        for (var i = 0; i < 3; i++) {
-            asteroids.push(new Asteroid({
-                x: asteroid.coords.x,
-                y: asteroid.coords.y,
-                z: asteroid.coords.z
-            }, asteroid.health));
-        }
+
+function colorAsteroid()
+{
+    quad( 1, 0, 3, 2 );
+    quad( 2, 3, 7, 6 );
+    quad( 3, 0, 4, 7 );
+    quad( 6, 5, 1, 2 );
+    quad( 4, 5, 6, 7 );
+    quad( 5, 4, 0, 1 );
+}
+
+function quad(a, b, c, d)
+{
+    let vertices = [
+        vec3( -0.5, -0.5,  0.5 ),
+        vec3( -0.5,  0.5,  0.5 ),
+        vec3(  0.5,  0.5,  0.5 ),
+        vec3(  0.5, -0.5,  0.5 ),
+        vec3( -0.5, -0.5, -0.5 ),
+        vec3( -0.5,  0.5, -0.5 ),
+        vec3(  0.5,  0.5, -0.5 ),
+        vec3(  0.5, -0.5, -0.5 )
+    ];
+
+    let texCo = [
+        vec2(0, 0),
+        vec2(0, 1),
+        vec2(1, 1),
+        vec2(1, 0)
+    ];
+
+    //vertex texture coordinates assigned by the index of the vertex
+    let indices = [ a, b, c, a, c, d ];
+    let texind  = [ 1, 0, 3, 1, 3, 2 ];
+
+    for ( let i = 0; i < indices.length; ++i ) {
+        points.push( vertices[indices[i]] );
+        texCoords.push( texCo[texind[i]] );
     }
 }
+
+
+function explodeAsteroid(asteroid){
+  asteroid.registerHit();
+  if (asteroid.health != 0) {
+    for (let i = 0; i < 3; i++) {
+      asteroids.push(new Asteroid({x: asteroid.coords.x, y: asteroid.coords.y, z: asteroid.coords.z}, asteroid.health));
+    }
+  }
+}
+
 
 function drawAsteroid(asteroid, ctx) {
     ctx = mult(ctx, translate(asteroid.coords.x, asteroid.coords.y, asteroid.coords.z));
     ctx = mult(ctx, scalem(asteroid.size, asteroid.size, asteroid.size));
     gl.uniformMatrix4fv(mvLoc, false, flatten(ctx));
-    gl.drawArrays(gl.TRIANGLES, 12, 36);
+    gl.drawArrays(gl.TRIANGLES, 0, 36);
 }
 
-function drawAsteroids(ctx) {
-    for (var i = 0; i < asteroids.length; i++) {
-        if (asteroids[i].health != 0) {
-            drawAsteroid(asteroids[i], ctx);
-        }
+function drawAsteroids(ctx){
+  for (let i = 0; i < asteroids.length; i++) {
+    if (asteroids[i].health != 0) {
+      drawAsteroid(asteroids[i], ctx);
     }
+  }
 }
 
 function updateAsteroids() {
-    for (var i = 0; i < asteroids.length; i++) {
-        let coords = asteroids[i].getCoords;
-        let speed = asteroids[i].getSpeed;
-        let direction = asteroids[i].getDirection;
-        coords.x += speed.dx * direction.xdir;
-        coords.y += speed.dy * direction.ydir;
-        coords.z += speed.dz * direction.zdir;
+  for (let i = 0; i < asteroids.length; i++) {
+    let coords = asteroids[i].getCoords;
+    let speed = asteroids[i].getSpeed;
+    let direction = asteroids[i].getDirection;
+    coords.x += speed.dx * direction.xdir;
+    coords.y += speed.dy * direction.ydir;
+    coords.z += speed.dz * direction.zdir;
 
-        asteroids[i].updateCoords = coords;
-    }
+    asteroids[i].updateCoords = coords;
+  }
 }
 
-let render = function() {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+function render()
+{
+    gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
 
     // Positon viewer
     let mv = lookAt(player.positionVector, player.eyeVector, vec3(0.0, 1.0, 0.0));
@@ -516,15 +482,9 @@ let render = function() {
 
     gl.uniformMatrix4fv(mvLoc, false, flatten(mv));
 
-    gl.bindTexture(gl.TEXTURE_2D, wallTexture);
-    for (var i = 0; (i * numVertices) < vertices.length; i++) {
-        gl.drawArrays(gl.TRIANGLES, i * numVertices, numVertices);
-    }
 
-    // drawAsteroids(mv);
-    // updateAsteroids();
+    drawAsteroids(mv);
+    updateAsteroids();
 
-    //gl.drawArrays(gl.TRIANGLES, numVertices, numVertices);
-
-    requestAnimFrame(render);
+    requestAnimFrame( render );
 }
