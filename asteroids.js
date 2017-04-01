@@ -57,8 +57,8 @@ const MAX_HEALTH = 3;
 
 let ufo;
 
-const MIN_UFO_TIME = 15; //seconds
-const MAX_UFO_TIME = 45; // seconds
+const MIN_UFO_TIME = 5; //seconds
+const MAX_UFO_TIME = 15; // seconds
 
 let UFO_INTERVAL = (Math.random() * (MAX_UFO_TIME - MIN_UFO_TIME) + MIN_UFO_TIME)*1000;
 
@@ -166,7 +166,7 @@ class Asteroid {
     this.size = this.health/MAX_HEALTH;
     this.updateBounds();
   }
-  
+
     updateBounds() {
         this.bounds = {
             back: this.coords.z - this.size,
@@ -206,6 +206,7 @@ class UFO {
 
     revive(){
         this.health = 1;
+        ufoSound.play();
     }
 
     createRandomSpeed() {
@@ -238,6 +239,7 @@ class UFO {
         if (this.health == 0)
             return;
         this.health--;
+        ufoSound.pause();
     }
 
     updateBounds() {
@@ -416,9 +418,6 @@ window.onload = function init()
     colorAsteroid();
     console.log(points.length);
 
-    let asteroid = new Asteroid({x:0, y:0, z:-5}, 3);
-    asteroids.push(asteroid);
-    console.log(asteroids);
 
     gl.viewport( 0, 0, canvas.width, canvas.height );
     gl.clearColor( 0.8, 0.8, 0.8, 1.0 );
