@@ -28,12 +28,19 @@ let zDist = -4.0;
 
 let proLoc;
 let mvLoc;
+let index;
+
+// TEXTURES
+
+let asteroidTexture;
+let ufoBodyTexture;
+let ufoCockpitTexture;
 
 
 // AUDIO
 
 let explosionSound = new Audio("audio/explosion.wav");
-let spaceShip      = new Audio("audio/Airplane_Rocket_Close.mp3");
+let spaceshipSound = new Audio("audio/Airplane_Rocket_Close.mp3");
 let laserSound     = new Audio("audio/Laser_Gun.mp3");
 let ufoSound       = new Audio("audio/Spaceship_Alarm.mp3");
 
@@ -48,38 +55,47 @@ const playerBoundingRadius = 0.5;
 
 const MAX_HEALTH = 3;
 
+let ufo;
+
+const MIN_UFO_TIME = 15; //seconds
+const MAX_UFO_TIME = 45; // seconds
+
+let UFO_INTERVAL = (Math.random() * (MAX_UFO_TIME - MIN_UFO_TIME) + MIN_UFO_TIME)*1000;
+
+
+setInterval(function(){
+  console.log("Checking UFO");
+  console.log(UFO_INTERVAL);
+  if (ufo.health == 0) {
+    ufo.revive();
+  }
+}, UFO_INTERVAL)
+
 class Asteroid {
-  constructor(coords, health) {
-    this.coords = coords;
-    this.health = health;
-    this.size = health/MAX_HEALTH;
-    this.bounds = {
-      back: coords.z-this.size,
-      front:  coords.z+this.size,
-      top: coords.y-this.size,
-      bottom:  coords.y+this.size,
-      left: coords.x-this.size,
-      right: coords.x+this.size
+    constructor(coords, health) {
+        this.coords = coords;
+        this.health = health;
+        this.size = health / MAX_HEALTH;
+        this.bounds = this.updateBounds();
+        this.speed = this.createRandomSpeed();
+        this.direction = this.createRandomDirection();
     };
-    this.speed = this.createRandomSpeed();
-    this.direction = this.createRandomDirection();
-  };
 
-  get getCoords(){
-    return this.coords;
-  }
+    get getCoords() {
+        return this.coords;
+    }
 
-  set updateCoords(coords){
-    this.coords = coords;
-  }
+    set updateCoords(coords) {
+        this.coords = coords;
+    }
 
-  get getSpeed(){
-    return this.speed;
-  }
+    get getSpeed() {
+        return this.speed;
+    }
 
-  get getDirection(){
-    return this.direction;
-  }
+    get getDirection() {
+        return this.direction;
+    }
 
   get boundingBox(){
     let x = this.coords.x;
@@ -111,17 +127,31 @@ class Asteroid {
     let dy = Math.random() * (max - min) + min;
     let dz = Math.random() * (max - min) + min;
 
-    return {dx: dx, dy: dy, dz:dz};
-  }
-
-  createRandomDirection(){
-    let prob = 0.5;
-    return {
-      xdir: Math.random() > prob ? 1 : -1,
-      ydir: Math.random() > prob ? 1 : -1,
-      zdir: Math.random() > prob ? 1 : -1
+        return {dx: dx, dy: dy, dz: dz};
     }
-  }
+
+    createRandomDirection() {
+        let prob = 0.5;
+        return {
+            xdir: Math.random() > prob
+                ? 1
+                : -1,
+            ydir: Math.random() > prob
+                ? 1
+                : -1,
+            zdir: Math.random() > prob
+                ? 1
+                : -1
+        }
+    }
+
+    registerHit() {
+        if (this.health == 0)
+            return;
+        this.health--;
+        this.size = this.health / MAX_HEALTH;
+        this.updateBounds();
+    }
 
   displace(x, y, z){
     this.coords.x += x;
@@ -136,17 +166,90 @@ class Asteroid {
     this.size = this.health/MAX_HEALTH;
     this.updateBounds();
   }
-
-  updateBounds(){
-    this.bounds = {
-    back: this.coords.z-this.size,
-    front:  this.coords.z+this.size,
-    top: this.coords.y-this.size,
-    bottom:  this.coords.y+this.size,
-    left: this.coords.x-this.size,
-    right: this.coords.x+this.size
-  }
+  
+    updateBounds() {
+        this.bounds = {
+            back: this.coords.z - this.size,
+            front: this.coords.z + this.size,
+            top: this.coords.y - this.size,
+            bottom: this.coords.y + this.size,
+            left: this.coords.x - this.size,
+            right: this.coords.x + this.size
+        }
+    }
 }
+
+class UFO {
+    constructor(coords, health) {
+        this.coords = coords;
+        this.health = health;
+        this.bounds = this.updateBounds();
+        this.speed = this.createRandomSpeed();
+        this.direction = this.createRandomDirection();
+    };
+
+    get getCoords() {
+        return this.coords;
+    }
+
+    set updateCoords(coords) {
+        this.coords = coords;
+    }
+
+    get getSpeed() {
+        return this.speed;
+    }
+
+    get getDirection() {
+        return this.direction;
+    }
+
+    revive(){
+        this.health = 1;
+    }
+
+    createRandomSpeed() {
+        let max = 0.002;
+        let min = 0.0001;
+
+        let dx = Math.random() * (max - min) + min;
+        let dy = Math.random() * (max - min) + min;
+        let dz = Math.random() * (max - min) + min;
+
+        return {dx: dx, dy: dy, dz: dz};
+    }
+
+    createRandomDirection() {
+        let prob = 0.5;
+        return {
+            xdir: Math.random() > prob
+                ? 1
+                : -1,
+            ydir: Math.random() > prob
+                ? 1
+                : -1,
+            zdir: Math.random() > prob
+                ? 1
+                : -1
+        }
+    }
+
+    registerHit() {
+        if (this.health == 0)
+            return;
+        this.health--;
+    }
+
+    updateBounds() {
+        this.bounds = {
+            back: this.coords.z - this.size,
+            front: this.coords.z + this.size,
+            top: this.coords.y - this.size,
+            bottom: this.coords.y + this.size,
+            left: this.coords.x - this.size,
+            right: this.coords.x + this.size
+        }
+    }
 }
 
 // The position variable contains the (x,y,z) co-ordinates of the viewer,
@@ -298,17 +401,20 @@ function configureTexture( image ) {
     gl.generateMipmap( gl.TEXTURE_2D );
     gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR );
     gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR );
+    return texture;
 }
 
 
 window.onload = function init()
 {
+    console.log(UFO_INTERVAL);
     canvas = document.getElementById( "gl-canvas" );
 
     gl = WebGLUtils.setupWebGL( canvas );
     if ( !gl ) { alert( "WebGL isn't available" ); }
 
     colorAsteroid();
+    console.log(points.length);
 
     let asteroid = new Asteroid({x:0, y:0, z:-5}, 3);
     asteroids.push(asteroid);
@@ -350,18 +456,33 @@ window.onload = function init()
     gl.vertexAttribPointer( vTexCoord, 2, gl.FLOAT, false, 0, 0 );
     gl.enableVertexAttribArray( vTexCoord );
 
-    let image = document.getElementById("texImage");
-    configureTexture( image );
+    let asteroidImage = document.getElementById("texAsteroid");
+    asteroidTexture = configureTexture( asteroidImage );
+
+    let bodyImage = document.getElementById("texUFOBody");
+    ufoBodyTexture = configureTexture( bodyImage );
+
+    let cockpitImage = document.getElementById("texUFOCockpit");
+    ufoCockpitTexture = configureTexture( cockpitImage );
+
+    gl.uniform1i(gl.getUniformLocation(program, "texture"), 0);
 
     proLoc = gl.getUniformLocation( program, "projection" );
     mvLoc = gl.getUniformLocation( program, "modelview" );
-    gl.uniform1i(gl.getUniformLocation(program, "texture"), 0);
 
 
     let proj = perspective( 50.0, 1.0, 0.2, 100.0 );
     gl.uniformMatrix4fv(proLoc, false, flatten(proj));
 
     player = new Ship([ 0.0, 0.0, 0.0 ], [ 0.0, 0.0, -1.0], [ 270.0, 90.0 ], playerBoundingBox, 0.5);
+
+    //Create base sphere for UFO
+    ufo = new UFO({x: 0, y: 0, z: -3}, 0);
+
+    let asteroid = new Asteroid({x:0, y:0, z:-5}, 2);
+    asteroids.push(asteroid);
+    console.log(asteroids);
+    console.log(points.length-36);
 
 
     // Event listener for keyboard
@@ -515,6 +636,7 @@ function explodeAsteroid(asteroid){
 
 
 function drawAsteroid(asteroid, ctx) {
+    gl.bindTexture(gl.TEXTURE_2D, asteroidTexture);
     ctx = mult(ctx, translate(asteroid.coords.x, asteroid.coords.y, asteroid.coords.z));
     ctx = mult(ctx, scalem(asteroid.size, asteroid.size, asteroid.size));
     gl.uniformMatrix4fv(mvLoc, false, flatten(ctx));
@@ -542,6 +664,38 @@ function updateAsteroids() {
   }
 }
 
+
+function drawUFO(ctx){
+  let ctx1 = ctx;
+  //draw body
+  gl.bindTexture(gl.TEXTURE_2D, ufoBodyTexture);
+  ctx1 = mult(ctx, translate(ufo.coords.x, ufo.coords.y, ufo.coords.z));
+  ctx1 = mult(ctx1, scalem(0.425, 0.075, 0.425));
+  gl.uniformMatrix4fv(mvLoc, false, flatten(ctx1));
+  gl.drawArrays(gl.TRIANGLES, 0, 36);
+
+  gl.bindTexture(gl.TEXTURE_2D, ufoCockpitTexture);
+
+  let ctx2 = ctx;
+  //draw cockpit
+  ctx2 = mult(ctx, translate(ufo.coords.x, ufo.coords.y+0.10, ufo.coords.z));
+  ctx2 = mult(ctx2, scalem(0.15, 0.15, 0.15));
+  gl.uniformMatrix4fv(mvLoc, false, flatten(ctx2));
+  gl.drawArrays(gl.TRIANGLES, 0, 36);
+
+}
+
+function updateUFO(){
+  let coords = ufo.getCoords;
+  let speed = ufo.getSpeed;
+  let direction = ufo.getDirection;
+  coords.x += speed.dx * direction.xdir;
+  coords.y += speed.dy * direction.ydir;
+  coords.z += speed.dz * direction.zdir;
+
+  ufo.updateCoords = coords;
+}
+
 function render()
 {
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -557,9 +711,16 @@ function render()
 
     gl.uniformMatrix4fv(mvLoc, false, flatten(mv));
 
+    gl.drawArrays(gl.TRIANGLES, 36, points.length-36);
+
 
     drawAsteroids(mv);
     updateAsteroids();
+
+    if (ufo.health != 0) {
+      drawUFO(mv);
+      updateUFO();
+    }
 
     requestAnimFrame( render );
 }
