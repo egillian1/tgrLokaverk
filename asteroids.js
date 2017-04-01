@@ -9,7 +9,7 @@ let texture;
 let points = [];
 let texCoords = [];
 let asteroids = [];
-
+let lasers = [];
 
 let xAxis = 0;
 let yAxis = 1;
@@ -35,7 +35,7 @@ let index;
 let asteroidTexture;
 let ufoBodyTexture;
 let ufoCockpitTexture;
-
+let laserTexture;
 
 // AUDIO
 
@@ -64,12 +64,28 @@ let UFO_INTERVAL = (Math.random() * (MAX_UFO_TIME - MIN_UFO_TIME) + MIN_UFO_TIME
 
 
 setInterval(function(){
-  console.log("Checking UFO");
-  console.log(UFO_INTERVAL);
   if (ufo.health == 0) {
     ufo.revive();
   }
 }, UFO_INTERVAL)
+
+class Laser {
+  constructor(coords, direction) {
+    this.coords = coords;
+    this.direction = direction;
+  }
+
+  get getCoords() {
+      return this.coords;
+  }
+
+  // Moves the laser by dist in current heading
+  addMovement(dist){
+    this.coords.x += dist * this.coords.x;
+    this.coords.y += dist * this.coords.y;
+    this.coords.z += dist * this.coords.z;
+  }
+}
 
 class Asteroid {
     constructor(coords, health) {
@@ -424,9 +440,7 @@ window.onload = function init()
 
     gl.enable(gl.DEPTH_TEST);
 
-    //
     //  Load shaders and initialize attribute buffers
-    //
     let program = initShaders( gl, "vertex-shader", "fragment-shader" );
     gl.useProgram( program );
 
@@ -464,6 +478,9 @@ window.onload = function init()
     let cockpitImage = document.getElementById("texUFOCockpit");
     ufoCockpitTexture = configureTexture( cockpitImage );
 
+    let laserImage = document.getElementById("texLaser");
+    laserTexture = configureTexture( laserImage );
+
     gl.uniform1i(gl.getUniformLocation(program, "texture"), 0);
 
     proLoc = gl.getUniformLocation( program, "projection" );
@@ -482,6 +499,9 @@ window.onload = function init()
     asteroids.push(asteroid);
     console.log(asteroids);
     console.log(points.length-36);
+
+    let laser = new Laser({x: 0.0, y: 0.0, z: -3.0}, {x: 0.0, y: 0.0, z: -1.0});
+    lasers.push(laser);
 
 
     // Event listener for keyboard
@@ -514,8 +534,6 @@ window.onload = function init()
               break;
         }
     });
-
-
 
     render();
 }
@@ -622,6 +640,20 @@ function quad(a, b, c, d)
     }
 }
 
+function drawLaser(laser, ctx){
+  gl.bindTexture(gl.TEXTURE_2D, laserTexture);
+  ctx = mult(ctx, translate(laser.coords.x, laser.coords.y, laser.coords.z));
+  ctx = mult(ctx, scalem(0.2, 0.2, 0.7));
+  gl.uniformMatrix4fv(mvLoc, false, flatten(ctx));
+  gl.drawArrays(gl.TRIANGLES, 0, 36);
+}
+
+function drawLasers(ctx){
+  for (var i = 0; i < lasers.length; i++) {
+    lasers[i].addMovement(0.01);
+    drawLaser(lasers[i], ctx);
+  }
+}
 
 function explodeAsteroid(asteroid){
   asteroid.registerHit();
@@ -712,6 +744,7 @@ function render()
 
     gl.drawArrays(gl.TRIANGLES, 36, points.length-36);
 
+    drawLasers(mv);
 
     drawAsteroids(mv);
     updateAsteroids();
