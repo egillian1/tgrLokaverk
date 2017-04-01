@@ -60,6 +60,20 @@ const MAX_HEALTH = 3;
 
 let ufo;
 
+const MIN_UFO_TIME = 15; //seconds
+const MAX_UFO_TIME = 45; // seconds
+
+let UFO_INTERVAL = (Math.random() * (MAX_UFO_TIME - MIN_UFO_TIME) + MIN_UFO_TIME)*1000;
+
+
+setInterval(function(){
+  console.log("Checking UFO");
+  console.log(UFO_INTERVAL);
+  if (ufo.health == 0) {
+    ufo.revive();
+  }
+}, UFO_INTERVAL)
+
 class Asteroid {
     constructor(coords, health) {
         this.coords = coords;
@@ -133,9 +147,9 @@ class Asteroid {
 }
 
 class UFO {
-    constructor(coords) {
+    constructor(coords, health) {
         this.coords = coords;
-        this.health = 1;
+        this.health = health;
         this.bounds = this.updateBounds();
         this.speed = this.createRandomSpeed();
         this.direction = this.createRandomDirection();
@@ -352,6 +366,7 @@ function configureTexture( image ) {
 
 window.onload = function init()
 {
+    console.log(UFO_INTERVAL);
     canvas = document.getElementById( "gl-canvas" );
 
     gl = WebGLUtils.setupWebGL( canvas );
@@ -418,7 +433,7 @@ window.onload = function init()
     player = new Ship([ 0.0, 0.0, 0.0 ], [ 0.0, 0.0, -1.0], [ 270.0, 90.0 ], playerBoundingBox);
 
     //Create base sphere for UFO
-    ufo = new UFO({x: 0, y: 0, z: -3}, 1);
+    ufo = new UFO({x: 0, y: 0, z: -3}, 0);
 
     let asteroid = new Asteroid({x:0, y:0, z:-5}, 2);
     asteroids.push(asteroid);
@@ -615,8 +630,10 @@ function render()
     drawAsteroids(mv);
     updateAsteroids();
 
-    drawUFO(mv);
-    updateUFO();
+    if (ufo.health != 0) {
+      drawUFO(mv);
+      updateUFO();
+    }
 
     requestAnimFrame( render );
 }
