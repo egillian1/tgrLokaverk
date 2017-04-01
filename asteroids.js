@@ -1,7 +1,7 @@
 let canvas;
 let gl;
 
-let NumVertices  = 36;
+let NumVertices = 36;
 
 let program;
 let texture;
@@ -10,15 +10,14 @@ let points = [];
 let texCoords = [];
 let asteroids = [];
 
-
 let xAxis = 0;
 let yAxis = 1;
 let zAxis = 2;
 
 let axis = 0;
-let theta = [ 0, 0, 0 ];
+let theta = [0, 0, 0];
 
-let movement = false;     // Do we rotate?
+let movement = false; // Do we rotate?
 let spinX = 0;
 let spinY = 0;
 let origX;
@@ -29,6 +28,7 @@ let zDist = -4.0;
 let proLoc;
 let mvLoc;
 let index;
+let boundaryBox;
 
 // TEXTURES
 
@@ -36,14 +36,12 @@ let asteroidTexture;
 let ufoBodyTexture;
 let ufoCockpitTexture;
 
-
 // AUDIO
 
 let explosionSound = new Audio("audio/explosion.wav");
 let spaceshipSound = new Audio("audio/Airplane_Rocket_Close.mp3");
-let laserSound     = new Audio("audio/Laser_Gun.mp3");
-let ufoSound       = new Audio("audio/Spaceship_Alarm.mp3");
-
+let laserSound = new Audio("audio/Laser_Gun.mp3");
+let ufoSound = new Audio("audio/Spaceship_Alarm.mp3");
 
 // Varibles for user view
 const movementSize = 0.5; // Size of forward/backward step
@@ -60,15 +58,14 @@ let ufo;
 const MIN_UFO_TIME = 5; //seconds
 const MAX_UFO_TIME = 15; // seconds
 
-let UFO_INTERVAL = (Math.random() * (MAX_UFO_TIME - MIN_UFO_TIME) + MIN_UFO_TIME)*1000;
+let UFO_INTERVAL = (Math.random() * (MAX_UFO_TIME - MIN_UFO_TIME) + MIN_UFO_TIME) * 1000;
 
-
-setInterval(function(){
-  console.log("Checking UFO");
-  console.log(UFO_INTERVAL);
-  if (ufo.health == 0) {
-    ufo.revive();
-  }
+setInterval(function() {
+    console.log("Checking UFO");
+    console.log(UFO_INTERVAL);
+    if (ufo.health == 0) {
+        ufo.revive();
+    }
 }, UFO_INTERVAL)
 
 class Asteroid {
@@ -97,35 +94,35 @@ class Asteroid {
         return this.direction;
     }
 
-  get boundingBox(){
-    let x = this.coords.x;
-    let y = this.coords.y;
-    let z = this.coords.z;
-    let s = this.size * 0.5;
-    return [
-      vec3(x-s, y+s, z+s),
-      vec3(x+s, y+s, z+s),
-      vec3(x-s, y+s, z-s),
-      vec3(x+s, y+s, z-s),
-      //
-      vec3(x-s, y-s, z+s),
-      vec3(x+s, y-s, z+s),
-      vec3(x-s, y-s, z-s),
-      vec3(x+s, y-s, z-s)
-    ];
-  }
+    get boundingBox() {
+        let x = this.coords.x;
+        let y = this.coords.y;
+        let z = this.coords.z;
+        let s = this.size * 0.5;
+        return [
+            vec3(x - s, y + s, z + s),
+            vec3(x + s, y + s, z + s),
+            vec3(x - s, y + s, z - s),
+            vec3(x + s, y + s, z - s),
+            //
+            vec3(x - s, y - s, z + s),
+            vec3(x + s, y - s, z + s),
+            vec3(x - s, y - s, z - s),
+            vec3(x + s, y - s, z - s)
+        ];
+    }
 
-  get radius(){
-    return this.size * 0.5;
-  }
+    get radius() {
+        return this.size * 0.5;
+    }
 
-  createRandomSpeed(){
-    let max = 0.00;
-    let min = 0.00;
+    createRandomSpeed() {
+        let max = 0.02;
+        let min = 0.001;
 
-    let dx = Math.random() * (max - min) + min;
-    let dy = Math.random() * (max - min) + min;
-    let dz = Math.random() * (max - min) + min;
+        let dx = Math.random() * (max - min) + min;
+        let dy = Math.random() * (max - min) + min;
+        let dz = Math.random() * (max - min) + min;
 
         return {dx: dx, dy: dy, dz: dz};
     }
@@ -153,19 +150,20 @@ class Asteroid {
         this.updateBounds();
     }
 
-  displace(x, y, z){
-    this.coords.x += x;
-    this.coords.y += y;
-    this.coords.z += z;
-    this.updateBounds();
-  }
+    displace(x, y, z) {
+        this.coords.x += x;
+        this.coords.y += y;
+        this.coords.z += z;
+        this.updateBounds();
+    }
 
-  registerHit(){
-    if(this.health == 0) return;
-    this.health--;
-    this.size = this.health/MAX_HEALTH;
-    this.updateBounds();
-  }
+    registerHit() {
+        if (this.health == 0)
+            return;
+        this.health--;
+        this.size = this.health / MAX_HEALTH;
+        this.updateBounds();
+    }
 
     updateBounds() {
         this.bounds = {
@@ -177,6 +175,7 @@ class Asteroid {
             right: this.coords.x + this.size
         }
     }
+
 }
 
 class UFO {
@@ -204,7 +203,7 @@ class UFO {
         return this.direction;
     }
 
-    revive(){
+    revive() {
         this.health = 1;
         ufoSound.play();
     }
@@ -261,7 +260,7 @@ class UFO {
 // and size is the "radius" (half the height) of the bounding box.
 class Ship {
     constructor(position, direction, angles, boundingBox, size) {
-        this.position = position;
+        this.coords = position;
         this.direction = direction;
         this.angles = angles;
         this.boundingBox = boundingBox;
@@ -286,9 +285,9 @@ class Ship {
 
     // Moves the viewer by dist in the current heading
     addMovement(dist) {
-        this.position[0] += dist * this.direction[0];
-        this.position[1] += dist * this.direction[1];
-        this.position[2] += dist * this.direction[2];
+        this.coords.x += dist * this.direction[0];
+        this.coords.y += dist * this.direction[1];
+        this.coords.z += dist * this.direction[2];
         for (let i = 0; i < this.boundingBox.length; i++) {
             this.boundingBox[i][0] += dist * this.direction[0];
             this.boundingBox[i][1] += dist * this.direction[1];
@@ -305,9 +304,9 @@ class Ship {
 
     // Displaces the viewer by x, y, z and moves the bounding box as well
     displace(x, y, z) {
-        this.position[0] += x;
-        this.position[1] += y;
-        this.position[2] += z;
+        this.coords.x += x;
+        this.coords.y += y;
+        this.coords.z += z;
         for (let i = 0; i < this.boundingBox.length; i++) {
             this.boundingBox[i][0] += x;
             this.boundingBox[i][1] += y;
@@ -317,13 +316,13 @@ class Ship {
 
     // getters
     get positionX() {
-        return this.position[0];
+        return this.coords.x;
     }
     get positionY() {
-        return this.position[1];
+        return this.coords.y;
     }
     get positionZ() {
-        return this.position[2];
+        return this.coords.z;
     }
     get theta() {
         return this.angles[0];
@@ -341,26 +340,24 @@ class Ship {
         return this.direction[2];
     }
     get positionVector() {
-        return vec3(this.position[0], this.position[1], this.position[2]);
+        return vec3(this.coords.x, this.coords.y, this.coords.z);
     }
     // Returns appropriate "eye" vector for use with the lookAt method
     get eyeVector() {
-        return vec3(this.position[0] + this.direction[0],
-          this.position[1] + this.direction[1],
-          this.position[2] + this.direction[2]);
+        return vec3(this.coords.x + this.direction[0], this.coords.y + this.direction[1], this.coords.z + this.direction[2]);
     }
-    get radius(){
-      return this.size;
+    get radius() {
+        return this.size;
     }
     // setters
     set setPositionX(x) {
-        this.position[0] = x;
+        this.coords.x = x;
     }
     set setPositionY(y) {
-        this.position[1] = y;
+        this.coords.y = y;
     }
     set setPositionZ(z) {
-        this.position[2] = z;
+        this.coords.z = z;
     }
     set setTheta(theta) {
         this.angles[0] = theta;
@@ -379,58 +376,124 @@ class Ship {
     }
 }
 
+class BoundaryBox {
+    constructor(width, height, depth) {
+        this.width = width;
+        this.height = height;
+        this.depth = depth;
+        this.leftBound = -width / 2;
+        this.rightBound = width / 2;
+        this.upperBound = height / 2;
+        this.lowerBound = -height / 2;
+        this.frontBound = depth / 2;
+        this.backBound = -depth / 2;
+    }
 
+    withinBox(object) {
+        let x = object.coords.x;
+        let y = object.coords.y;
+        let z = object.coords.z;
+
+        let xmove = this.width - 0.2;
+        let ymove = this.height - 0.2;
+        let zmove = this.depth - 0.2;
+
+        if (x <= this.leftBound) {
+            console.log("Too far left!");
+            console.log(object.coords);
+            object.displace(xmove, 0, 0);
+            console.log(object.coords);
+        }
+
+        if (x >= this.rightBound) {
+            console.log("Too far right!");
+            console.log(object.coords);
+            object.displace(-xmove, 0, 0);
+            console.log(object.coords);
+        }
+
+        if (y <= this.lowerBound) {
+            console.log("Too low!");
+            console.log(object.coords);
+            object.displace(0, ymove, 0);
+            console.log(object.coords);
+        }
+
+        if (y >= this.upperBound) {
+            console.log("Too high");
+            console.log(object.coords);
+            object.displace(0, -ymove, 0);
+            console.log(object.coords);
+        }
+
+        if (z >= this.frontBound) {
+            console.log("Too close!");
+            console.log(object.coords);
+            object.displace(0,0,-zmove);
+            console.log(object.coords);
+        }
+
+        if (z <= this.backBound) {
+            console.log("Too far away!");
+            console.log(object.coords);
+            object.displace(0,0,zmove);
+            console.log(object.coords);
+        }
+    }
+}
 
 // Corners of the box bounding the player's ship
 let playerBoundingBox = [
-    vec3(-0.5, 0.5, 0.5),
-    vec3(0.5, 0.5, 0.5),
-    vec3(-0.5, 0.5, -0.5),
-    vec3(0.5, 0.5, -0.5),
+    vec3(-0.2, 0.2, 0.2),
+    vec3(0.2, 0.2, 0.2),
+    vec3(-0.2, 0.2, -0.2),
+    vec3(0.2, 0.2, -0.2),
     //
-    vec3(-0.5, -0.5, 0.5),
-    vec3(0.5, -0.5, 0.5),
-    vec3(-0.5, -0.5, -0.5),
-    vec3(0.5, -0.5, -0.5)
+    vec3(-0.2, -0.2, 0.2),
+    vec3(0.2, -0.2, 0.2),
+    vec3(-0.2, -0.2, -0.2),
+    vec3(0.2, -0.2, -0.2)
 ];
 
-
-function configureTexture( image ) {
+function configureTexture(image) {
     texture = gl.createTexture();
-    gl.bindTexture( gl.TEXTURE_2D, texture );
+    gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    gl.texImage2D( gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image );
-    gl.generateMipmap( gl.TEXTURE_2D );
-    gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR );
-    gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR );
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     return texture;
 }
 
-
-window.onload = function init()
-{
+window.onload = function init() {
     console.log(UFO_INTERVAL);
-    canvas = document.getElementById( "gl-canvas" );
+    canvas = document.getElementById("gl-canvas");
 
-    gl = WebGLUtils.setupWebGL( canvas );
-    if ( !gl ) { alert( "WebGL isn't available" ); }
+    gl = WebGLUtils.setupWebGL(canvas);
+    if (!gl) {
+        alert("WebGL isn't available");
+    }
 
     colorAsteroid();
     console.log(points.length);
 
+    // boundaryBox = new BoundaryBox(25, 25, 25);
+    boundaryBox = new BoundaryBox(7.5,7.5,7.5);
+    console.log(boundaryBox);
 
-    gl.viewport( 0, 0, canvas.width, canvas.height );
-    gl.clearColor( 0.8, 0.8, 0.8, 1.0 );
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(0.8, 0.8, 0.8, 1.0);
 
     gl.enable(gl.DEPTH_TEST);
 
     //
     //  Load shaders and initialize attribute buffers
     //
-    let program = initShaders( gl, "vertex-shader", "fragment-shader" );
-    gl.useProgram( program );
+    let program = initShaders(gl, "vertex-shader", "fragment-shader");
+    gl.useProgram(program);
 
-/*
+    /*
     let cBuffer = gl.createBuffer();
     gl.bindBuffer( gl.ARRAY_BUFFER, cBuffer );
     gl.bufferData( gl.ARRAY_BUFFER, flatten(colors), gl.STATIC_DRAW );
@@ -440,49 +503,63 @@ window.onload = function init()
     gl.enableVertexAttribArray( vColor );
 */
     let vBuffer = gl.createBuffer();
-    gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
-    gl.bufferData( gl.ARRAY_BUFFER, flatten(points), gl.STATIC_DRAW );
+    gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(points), gl.STATIC_DRAW);
 
-    let vPosition = gl.getAttribLocation( program, "vPosition" );
-    gl.vertexAttribPointer( vPosition, 3, gl.FLOAT, false, 0, 0 );
-    gl.enableVertexAttribArray( vPosition );
+    let vPosition = gl.getAttribLocation(program, "vPosition");
+    gl.vertexAttribPointer(vPosition, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(vPosition);
 
     let tBuffer = gl.createBuffer();
-    gl.bindBuffer( gl.ARRAY_BUFFER, tBuffer);
-    gl.bufferData( gl.ARRAY_BUFFER, flatten(texCoords), gl.STATIC_DRAW );
+    gl.bindBuffer(gl.ARRAY_BUFFER, tBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(texCoords), gl.STATIC_DRAW);
 
-    let vTexCoord = gl.getAttribLocation( program, "vTexCoord" );
-    gl.vertexAttribPointer( vTexCoord, 2, gl.FLOAT, false, 0, 0 );
-    gl.enableVertexAttribArray( vTexCoord );
+    let vTexCoord = gl.getAttribLocation(program, "vTexCoord");
+    gl.vertexAttribPointer(vTexCoord, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(vTexCoord);
 
     let asteroidImage = document.getElementById("texAsteroid");
-    asteroidTexture = configureTexture( asteroidImage );
+    asteroidTexture = configureTexture(asteroidImage);
 
     let bodyImage = document.getElementById("texUFOBody");
-    ufoBodyTexture = configureTexture( bodyImage );
+    ufoBodyTexture = configureTexture(bodyImage);
 
     let cockpitImage = document.getElementById("texUFOCockpit");
-    ufoCockpitTexture = configureTexture( cockpitImage );
+    ufoCockpitTexture = configureTexture(cockpitImage);
 
     gl.uniform1i(gl.getUniformLocation(program, "texture"), 0);
 
-    proLoc = gl.getUniformLocation( program, "projection" );
-    mvLoc = gl.getUniformLocation( program, "modelview" );
+    proLoc = gl.getUniformLocation(program, "projection");
+    mvLoc = gl.getUniformLocation(program, "modelview");
 
-
-    let proj = perspective( 50.0, 1.0, 0.2, 100.0 );
+    let proj = perspective(50.0, 1.0, 0.2, 100.0);
     gl.uniformMatrix4fv(proLoc, false, flatten(proj));
 
-    player = new Ship([ 0.0, 0.0, 0.0 ], [ 0.0, 0.0, -1.0], [ 270.0, 90.0 ], playerBoundingBox, 0.5);
+    player = new Ship({
+        x: 0,
+        y: 0,
+        z: 0
+    }, [
+        0.0, 0.0, -1.0
+    ], [
+        270.0, 90.0
+    ], playerBoundingBox, 0.5);
 
     //Create base sphere for UFO
-    ufo = new UFO({x: 0, y: 0, z: -3}, 0);
+    ufo = new UFO({
+        x: 0,
+        y: 0,
+        z: -3
+    }, 0);
 
-    let asteroid = new Asteroid({x:0, y:0, z:-5}, 2);
+    let asteroid = new Asteroid({
+        x: 0,
+        y: 0,
+        z: -3
+    }, 2);
     asteroids.push(asteroid);
     console.log(asteroids);
-    console.log(points.length-36);
-
+    console.log(points.length - 36);
 
     // Event listener for keyboard
     window.addEventListener("keydown", function(e) {
@@ -510,99 +587,66 @@ window.onload = function init()
                 explodeAsteroid(asteroids[0]);
                 break;
             default:
-              console.log(e.keyCode);
-              break;
+                console.log(e.keyCode);
+                break;
         }
     });
-
-
 
     render();
 }
 
-// Checks if the object is within bounds and moves it if necessary
-function checkIfObjectInBounds(object) {
-    let boxPoints = object.boundingBox;
-    const displacement = 2 * boundaryRadius - 2 * (object.radius + 0.1);
-    for (var i = 0; i < boxPoints.length; i++) {
-        let point = boxPoints[i];
-        if (point[0] <= -boundaryRadius) {
-            object.displace(displacement, 0, 0);
-
-        } else if (point[0] >= boundaryRadius) {
-            object.displace(-displacement, 0, 0);
-
-        } else if (point[1] <= -boundaryRadius) {
-            object.displace(0, displacement, 0);
-
-        } else if (point[1] >= boundaryRadius) {
-            object.displace(0, -displacement, 0);
-
-        } else if (point[2] <= -boundaryRadius) {
-            object.displace(0, 0, displacement);
-
-        } else if (point[2] >= boundaryRadius) {
-            object.displace(0, 0, -displacement);
-
+// Checks if the two objects are colliding
+function detectCollision(obj1, obj2) {
+    let collision = false;
+    let box1 = obj1.boundingBox;
+    let box2 = obj2.boundingBox;
+    for (var i = 0; i < obj1.length; i++) {
+        // Temporary variable for keeping track if co-ordinates of point from obj1
+        // are inside the bounding box of obj2
+        let pointInRange = [false, false, false];
+        // Check if x co-ordinate of point is inside x co-ordinates of obj2
+        if (box1[i][0] >= box2[0][0] && box1[i][0] <= box2[1][0]) {
+            pointInRange[0] = true;
+            console.log("x in range");
+        }
+        // Check if y co-ordinate of point is inside y co-ordinates of obj2
+        if (box1[i][1] >= box2[0][1] && box1[i][1] <= box2[3][0]) {
+            pointInRange[1] = true;
+            console.log("y in range");
+        }
+        // Check if z co-ordinate of point is inside z co-ordinates of obj2
+        if (box1[i][2] >= box2[0][2] && box1[i][2] <= box2[2][2]) {
+            console.log("z in range");
+            pointInRange[0] = true;
+        }
+        if (pointInRange[0] && pointInRange[1] && pointInRange[2]) {
+            collision = true;
+            console.log("collision");
         }
     }
+    //console.log("no collision");
+    return collision;
 }
 
-// Checks if the two objects are colliding
-function detectCollision(obj1, obj2){
-  let collision = false;
-  let box1 = obj1.boundingBox;
-  let box2 = obj2.boundingBox;
-  for (var i = 0; i < obj1.length; i++) {
-    // Temporary variable for keeping track if co-ordinates of point from obj1
-    // are inside the bounding box of obj2
-    let pointInRange = [false, false, false];
-    // Check if x co-ordinate of point is inside x co-ordinates of obj2
-    if(box1[i][0] >= box2[0][0] && box1[i][0] <= box2[1][0]){
-      pointInRange[0] = true;
-      console.log("x in range");
-    }
-    // Check if y co-ordinate of point is inside y co-ordinates of obj2
-    if(box1[i][1] >= box2[0][1] && box1[i][1] <= box2[3][0]){
-      pointInRange[1] = true;
-      console.log("y in range");
-    }
-    // Check if z co-ordinate of point is inside z co-ordinates of obj2
-    if(box1[i][2] >= box2[0][2] && box1[i][2] <= box2[2][2]){
-      console.log("z in range");
-      pointInRange[0] = true;
-    }
-    if(pointInRange[0] && pointInRange[1] && pointInRange[2]){
-      collision = true;
-      console.log("collision");
-    }
-  }
-  //console.log("no collision");
-  return collision;
+function colorAsteroid() {
+    quad(1, 0, 3, 2);
+    quad(2, 3, 7, 6);
+    quad(3, 0, 4, 7);
+    quad(6, 5, 1, 2);
+    quad(4, 5, 6, 7);
+    quad(5, 4, 0, 1);
 }
 
-
-function colorAsteroid()
-{
-    quad( 1, 0, 3, 2 );
-    quad( 2, 3, 7, 6 );
-    quad( 3, 0, 4, 7 );
-    quad( 6, 5, 1, 2 );
-    quad( 4, 5, 6, 7 );
-    quad( 5, 4, 0, 1 );
-}
-
-function quad(a, b, c, d)
-{
+function quad(a, b, c, d) {
     let vertices = [
-        vec3( -0.5, -0.5,  0.5 ),
-        vec3( -0.5,  0.5,  0.5 ),
-        vec3(  0.5,  0.5,  0.5 ),
-        vec3(  0.5, -0.5,  0.5 ),
-        vec3( -0.5, -0.5, -0.5 ),
-        vec3( -0.5,  0.5, -0.5 ),
-        vec3(  0.5,  0.5, -0.5 ),
-        vec3(  0.5, -0.5, -0.5 )
+        vec3(-0.5, -0.5, 0.5),
+        vec3(-0.5, 0.5, 0.5),
+        vec3(0.5, 0.5, 0.5),
+        vec3(0.5, -0.5, 0.5),
+        vec3(-0.5, -0.5, -0.5),
+        vec3(-0.5, 0.5, -0.5),
+        vec3(0.5, 0.5, -0.5),
+        vec3(0.5, -0.5, -0.5)
     ];
 
     let texCo = [
@@ -613,26 +657,42 @@ function quad(a, b, c, d)
     ];
 
     //vertex texture coordinates assigned by the index of the vertex
-    let indices = [ a, b, c, a, c, d ];
-    let texind  = [ 1, 0, 3, 1, 3, 2 ];
+    let indices = [
+        a,
+        b,
+        c,
+        a,
+        c,
+        d
+    ];
+    let texind = [
+        1,
+        0,
+        3,
+        1,
+        3,
+        2
+    ];
 
-    for ( let i = 0; i < indices.length; ++i ) {
-        points.push( vertices[indices[i]] );
-        texCoords.push( texCo[texind[i]] );
+    for (let i = 0; i < indices.length; ++i) {
+        points.push(vertices[indices[i]]);
+        texCoords.push(texCo[texind[i]]);
     }
 }
 
-
-function explodeAsteroid(asteroid){
-  asteroid.registerHit();
-  explosionSound.play();
-  if (asteroid.health != 0) {
-    for (let i = 0; i < 3; i++) {
-      asteroids.push(new Asteroid({x: asteroid.coords.x, y: asteroid.coords.y, z: asteroid.coords.z}, asteroid.health));
+function explodeAsteroid(asteroid) {
+    asteroid.registerHit();
+    explosionSound.play();
+    if (asteroid.health != 0) {
+        for (let i = 0; i < 3; i++) {
+            asteroids.push(new Asteroid({
+                x: asteroid.coords.x,
+                y: asteroid.coords.y,
+                z: asteroid.coords.z
+            }, asteroid.health));
+        }
     }
-  }
 }
-
 
 function drawAsteroid(asteroid, ctx) {
     gl.bindTexture(gl.TEXTURE_2D, asteroidTexture);
@@ -642,84 +702,78 @@ function drawAsteroid(asteroid, ctx) {
     gl.drawArrays(gl.TRIANGLES, 0, 36);
 }
 
-function drawAsteroids(ctx){
-  for (let i = 0; i < asteroids.length; i++) {
-    if (asteroids[i].health != 0) {
-      drawAsteroid(asteroids[i], ctx);
+function drawAsteroids(ctx) {
+    for (let i = 0; i < asteroids.length; i++) {
+        if (asteroids[i].health != 0) {
+            drawAsteroid(asteroids[i], ctx);
+        }
     }
-  }
 }
 
 function updateAsteroids() {
-  for (let i = 0; i < asteroids.length; i++) {
-    let coords = asteroids[i].getCoords;
-    let speed = asteroids[i].getSpeed;
-    let direction = asteroids[i].getDirection;
+    for (let i = 0; i < asteroids.length; i++) {
+        let coords = asteroids[i].getCoords;
+        let speed = asteroids[i].getSpeed;
+        let direction = asteroids[i].getDirection;
+        coords.x += speed.dx * direction.xdir;
+        coords.y += speed.dy * direction.ydir;
+        coords.z += speed.dz * direction.zdir;
+
+        asteroids[i].updateCoords = coords;
+    }
+}
+
+function drawUFO(ctx) {
+    let ctx1 = ctx;
+    //draw body
+    gl.bindTexture(gl.TEXTURE_2D, ufoBodyTexture);
+    ctx1 = mult(ctx, translate(ufo.coords.x, ufo.coords.y, ufo.coords.z));
+    ctx1 = mult(ctx1, scalem(0.425, 0.075, 0.425));
+    gl.uniformMatrix4fv(mvLoc, false, flatten(ctx1));
+    gl.drawArrays(gl.TRIANGLES, 0, 36);
+
+    gl.bindTexture(gl.TEXTURE_2D, ufoCockpitTexture);
+
+    let ctx2 = ctx;
+    //draw cockpit
+    ctx2 = mult(ctx, translate(ufo.coords.x, ufo.coords.y + 0.10, ufo.coords.z));
+    ctx2 = mult(ctx2, scalem(0.15, 0.15, 0.15));
+    gl.uniformMatrix4fv(mvLoc, false, flatten(ctx2));
+    gl.drawArrays(gl.TRIANGLES, 0, 36);
+
+}
+
+function updateUFO() {
+    let coords = ufo.getCoords;
+    let speed = ufo.getSpeed;
+    let direction = ufo.getDirection;
     coords.x += speed.dx * direction.xdir;
     coords.y += speed.dy * direction.ydir;
     coords.z += speed.dz * direction.zdir;
 
-    asteroids[i].updateCoords = coords;
-  }
+    ufo.updateCoords = coords;
 }
 
-
-function drawUFO(ctx){
-  let ctx1 = ctx;
-  //draw body
-  gl.bindTexture(gl.TEXTURE_2D, ufoBodyTexture);
-  ctx1 = mult(ctx, translate(ufo.coords.x, ufo.coords.y, ufo.coords.z));
-  ctx1 = mult(ctx1, scalem(0.425, 0.075, 0.425));
-  gl.uniformMatrix4fv(mvLoc, false, flatten(ctx1));
-  gl.drawArrays(gl.TRIANGLES, 0, 36);
-
-  gl.bindTexture(gl.TEXTURE_2D, ufoCockpitTexture);
-
-  let ctx2 = ctx;
-  //draw cockpit
-  ctx2 = mult(ctx, translate(ufo.coords.x, ufo.coords.y+0.10, ufo.coords.z));
-  ctx2 = mult(ctx2, scalem(0.15, 0.15, 0.15));
-  gl.uniformMatrix4fv(mvLoc, false, flatten(ctx2));
-  gl.drawArrays(gl.TRIANGLES, 0, 36);
-
-}
-
-function updateUFO(){
-  let coords = ufo.getCoords;
-  let speed = ufo.getSpeed;
-  let direction = ufo.getDirection;
-  coords.x += speed.dx * direction.xdir;
-  coords.y += speed.dy * direction.ydir;
-  coords.z += speed.dz * direction.zdir;
-
-  ufo.updateCoords = coords;
-}
-
-function render()
-{
-    gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
+function render() {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     // Positon viewer
     let mv = lookAt(player.positionVector, player.eyeVector, vec3(0.0, 1.0, 0.0));
 
-    detectCollision(player, asteroids[0]);
-
-    checkIfObjectInBounds(player);
-    checkIfObjectInBounds(asteroids[0]);
+    boundaryBox.withinBox(player);
+    boundaryBox.withinBox(asteroids[0]);
 
     gl.uniformMatrix4fv(mvLoc, false, flatten(mv));
 
-    gl.drawArrays(gl.TRIANGLES, 36, points.length-36);
-
+    gl.drawArrays(gl.TRIANGLES, 36, points.length - 36);
 
     drawAsteroids(mv);
     updateAsteroids();
 
     if (ufo.health != 0) {
-      drawUFO(mv);
-      updateUFO();
+        drawUFO(mv);
+        updateUFO();
     }
 
-    requestAnimFrame( render );
+    requestAnimFrame(render);
 }
