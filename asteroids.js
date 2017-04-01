@@ -719,13 +719,6 @@ function drawLasers(ctx){
   }
 }
 
-function explodeAsteroid(asteroid){
-  asteroid.registerHit();
-  explosionSound.play();
-  if (asteroid.health != 0) {
-    for (let i = 0; i < 3; i++) {
-      asteroids.push(new Asteroid({x: asteroid.coords.x, y: asteroid.coords.y, z: asteroid.coords.z}, asteroid.health));
-=======
 function explodeAsteroid(asteroid) {
     asteroid.registerHit();
     explosionSound.play();
@@ -737,7 +730,6 @@ function explodeAsteroid(asteroid) {
                 z: asteroid.coords.z
             }, asteroid.health));
         }
->>>>>>> 9d5383aa254c9caef1d7f191b46e54adf0dd48de
     }
 }
 
