@@ -53,9 +53,6 @@ const degreesPerTurn = 10.0;
 const boundaryRadius = 10.0;
 const playerBoundingRadius = 0.5;
 
-const displacement = 2 * boundaryRadius - 2 * (playerBoundingRadius + 0.1);
-
-
 const MAX_HEALTH = 3;
 
 let ufo;
@@ -100,13 +97,35 @@ class Asteroid {
         return this.direction;
     }
 
-    createRandomSpeed() {
-        let max = 0.002;
-        let min = 0.0001;
+  get boundingBox(){
+    let x = this.coords.x;
+    let y = this.coords.y;
+    let z = this.coords.z;
+    let s = this.size * 0.5;
+    return [
+      vec3(x-s, y+s, z+s),
+      vec3(x+s, y+s, z+s),
+      vec3(x-s, y+s, z-s),
+      vec3(x+s, y+s, z-s),
+      //
+      vec3(x-s, y-s, z+s),
+      vec3(x+s, y-s, z+s),
+      vec3(x-s, y-s, z-s),
+      vec3(x+s, y-s, z-s)
+    ];
+  }
 
-        let dx = Math.random() * (max - min) + min;
-        let dy = Math.random() * (max - min) + min;
-        let dz = Math.random() * (max - min) + min;
+  get radius(){
+    return this.size * 0.5;
+  }
+
+  createRandomSpeed(){
+    let max = 0.00;
+    let min = 0.00;
+
+    let dx = Math.random() * (max - min) + min;
+    let dy = Math.random() * (max - min) + min;
+    let dz = Math.random() * (max - min) + min;
 
         return {dx: dx, dy: dy, dz: dz};
     }
@@ -134,6 +153,20 @@ class Asteroid {
         this.updateBounds();
     }
 
+  displace(x, y, z){
+    this.coords.x += x;
+    this.coords.y += y;
+    this.coords.z += z;
+    this.updateBounds();
+  }
+
+  registerHit(){
+    if(this.health == 0) return;
+    this.health--;
+    this.size = this.health/MAX_HEALTH;
+    this.updateBounds();
+  }
+  
     updateBounds() {
         this.bounds = {
             back: this.coords.z - this.size,
@@ -222,13 +255,15 @@ class UFO {
 // The position variable contains the (x,y,z) co-ordinates of the viewer,
 // direction contains the (x,y,z) vector components of the heading and angles
 // contains the heading of the viewer where angles[0] is theta and angles[1]
-// is phi.
+// is phi. boundingBox contains the 8 corners of the box that bounds the player
+// and size is the "radius" (half the height) of the bounding box.
 class Ship {
-    constructor(position, direction, angles, boundingBox) {
+    constructor(position, direction, angles, boundingBox, size) {
         this.position = position;
         this.direction = direction;
         this.angles = angles;
         this.boundingBox = boundingBox;
+        this.size = size;
     }
 
     addToTheta(theta) {
@@ -306,8 +341,14 @@ class Ship {
     get positionVector() {
         return vec3(this.position[0], this.position[1], this.position[2]);
     }
+    // Returns appropriate "eye" vector for use with the lookAt method
     get eyeVector() {
-        return vec3(this.position[0] + this.direction[0], this.position[1] + this.direction[1], this.position[2] + this.direction[2]);
+        return vec3(this.position[0] + this.direction[0],
+          this.position[1] + this.direction[1],
+          this.position[2] + this.direction[2]);
+    }
+    get radius(){
+      return this.size;
     }
     // setters
     set setPositionX(x) {
@@ -375,6 +416,9 @@ window.onload = function init()
     colorAsteroid();
     console.log(points.length);
 
+    let asteroid = new Asteroid({x:0, y:0, z:-5}, 3);
+    asteroids.push(asteroid);
+    console.log(asteroids);
 
     gl.viewport( 0, 0, canvas.width, canvas.height );
     gl.clearColor( 0.8, 0.8, 0.8, 1.0 );
@@ -430,7 +474,7 @@ window.onload = function init()
     let proj = perspective( 50.0, 1.0, 0.2, 100.0 );
     gl.uniformMatrix4fv(proLoc, false, flatten(proj));
 
-    player = new Ship([ 0.0, 0.0, 0.0 ], [ 0.0, 0.0, -1.0], [ 270.0, 90.0 ], playerBoundingBox);
+    player = new Ship([ 0.0, 0.0, 0.0 ], [ 0.0, 0.0, -1.0], [ 270.0, 90.0 ], playerBoundingBox, 0.5);
 
     //Create base sphere for UFO
     ufo = new UFO({x: 0, y: 0, z: -3}, 0);
@@ -477,25 +521,65 @@ window.onload = function init()
     render();
 }
 
-// Checks if the object is within bounds
+// Checks if the object is within bounds and moves it if necessary
 function checkIfObjectInBounds(object) {
     let boxPoints = object.boundingBox;
+    const displacement = 2 * boundaryRadius - 2 * (object.radius + 0.1);
     for (var i = 0; i < boxPoints.length; i++) {
         let point = boxPoints[i];
         if (point[0] <= -boundaryRadius) {
             object.displace(displacement, 0, 0);
+
         } else if (point[0] >= boundaryRadius) {
             object.displace(-displacement, 0, 0);
+
         } else if (point[1] <= -boundaryRadius) {
             object.displace(0, displacement, 0);
+
         } else if (point[1] >= boundaryRadius) {
             object.displace(0, -displacement, 0);
+
         } else if (point[2] <= -boundaryRadius) {
             object.displace(0, 0, displacement);
+
         } else if (point[2] >= boundaryRadius) {
             object.displace(0, 0, -displacement);
+
         }
     }
+}
+
+// Checks if the two objects are colliding
+function detectCollision(obj1, obj2){
+  let collision = false;
+  let box1 = obj1.boundingBox;
+  let box2 = obj2.boundingBox;
+  for (var i = 0; i < obj1.length; i++) {
+    // Temporary variable for keeping track if co-ordinates of point from obj1
+    // are inside the bounding box of obj2
+    let pointInRange = [false, false, false];
+    // Check if x co-ordinate of point is inside x co-ordinates of obj2
+    if(box1[i][0] >= box2[0][0] && box1[i][0] <= box2[1][0]){
+      pointInRange[0] = true;
+      console.log("x in range");
+    }
+    // Check if y co-ordinate of point is inside y co-ordinates of obj2
+    if(box1[i][1] >= box2[0][1] && box1[i][1] <= box2[3][0]){
+      pointInRange[1] = true;
+      console.log("y in range");
+    }
+    // Check if z co-ordinate of point is inside z co-ordinates of obj2
+    if(box1[i][2] >= box2[0][2] && box1[i][2] <= box2[2][2]){
+      console.log("z in range");
+      pointInRange[0] = true;
+    }
+    if(pointInRange[0] && pointInRange[1] && pointInRange[2]){
+      collision = true;
+      console.log("collision");
+    }
+  }
+  //console.log("no collision");
+  return collision;
 }
 
 
@@ -620,7 +704,10 @@ function render()
     // Positon viewer
     let mv = lookAt(player.positionVector, player.eyeVector, vec3(0.0, 1.0, 0.0));
 
+    detectCollision(player, asteroids[0]);
+
     checkIfObjectInBounds(player);
+    checkIfObjectInBounds(asteroids[0]);
 
     gl.uniformMatrix4fv(mvLoc, false, flatten(mv));
 
