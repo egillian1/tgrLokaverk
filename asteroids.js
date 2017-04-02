@@ -220,7 +220,7 @@ class UFO {
 
     revive() {
         this.health = 1;
-        // ufoSound.play();
+        ufoSound.play();
     }
 
     createRandomSpeed() {
