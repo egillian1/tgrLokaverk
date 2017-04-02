@@ -80,6 +80,13 @@ class Laser {
     this.firedByPlayer = this.firedByPlayer;
     this.angles = angles;
     this.updateBounds();
+    this.active = true;
+  }
+
+  deactivate(){
+    if(this.active){
+      this.active = false;
+    }
   }
 
   // Moves the laser by dist in current heading
@@ -232,6 +239,7 @@ class UFO {
             return;
         this.health--;
         ufoSound.pause();
+        explosionSound.play();
     }
 
     updateBounds() {
@@ -262,11 +270,12 @@ class UFO {
 // is phi. boundingBox contains the 8 corners of the box that bounds the player
 // and size is the "radius" (half the height) of the bounding box.
 class Ship {
-    constructor(position, direction, angles, scale) {
+    constructor(position, direction, angles, scale, health) {
         this.coords = position;
         this.direction = direction;
         this.angles = angles;
         this.rad = scale;
+        this.health = health;
         this.bounds = this.updateBounds();
     }
 
@@ -372,6 +381,14 @@ class BoundaryBox {
     }
 
     withinBox(object) {
+
+        let laserFlag;
+        if(object instanceof Laser){
+          laserFlag = true;
+        } else {
+          laserFlag = false;
+        }
+
         let x = object.coords.x;
         let y = object.coords.y;
         let z = object.coords.z;
@@ -381,27 +398,51 @@ class BoundaryBox {
         let zmove = this.depth - 0.2;
 
         if (x <= this.leftBound) {
+          if (laserFlag) {
+            object.deactivate();
+          } else {
             object.displace(xmove, 0, 0);
+          }
         }
 
         if (x >= this.rightBound) {
+          if (laserFlag) {
+            object.deactivate();
+          } else {
             object.displace(-xmove, 0, 0);
+          }
         }
 
         if (y <= this.lowerBound) {
+          if (laserFlag) {
+            object.deactivate();
+          } else {
             object.displace(0, ymove, 0);
+          }
         }
 
         if (y >= this.upperBound) {
+          if (laserFlag) {
+            object.deactivate();
+          } else {
             object.displace(0, -ymove, 0);
+          }
         }
 
         if (z >= this.frontBound) {
+          if (laserFlag) {
+            object.deactivate();
+          } else {
             object.displace(0,0,-zmove);
+          }
         }
 
         if (z <= this.backBound) {
+          if (laserFlag) {
+            object.deactivate();
+          } else {
             object.displace(0,0,zmove);
+          }
         }
     }
 
@@ -499,7 +540,7 @@ window.onload = function init() {
     gl.uniformMatrix4fv(proLoc, false, flatten(proj));
 
     player = new Ship({ x: 0, y: 0, z: 0}, [ 0.0, 0.0, -1.0],
-      [ 270.0, 90.0], 0.3);
+      [ 270.0, 90.0], 0.3, 5);
 
     //Create base sphere for UFO
     ufo = new UFO({
@@ -513,8 +554,10 @@ window.onload = function init() {
       asteroids.push(new Asteroid(boundaryBox.getRandomLocationWithinBox(),randHealth));
     }
 
-    let laser = new Laser({x: 0.0, y: 0.0, z: -3.0}, {x: 0.0, y: 0.0, z: -1.0}, true);
-    lasers.push(laser);
+    asteroids.push(new Asteroid({x:0, y:0, z:-5}, 3));
+
+    // let laser = new Laser({x: 0.0, y: 0.0, z: -3.0}, {x: 0.0, y: 0.0, z: -1.0}, true);
+    // lasers.push(laser);
 
     // Event listener for keyboard
     window.addEventListener("keydown", function(e) {
@@ -539,7 +582,6 @@ window.onload = function init() {
                 player.addMovement(-movementSize);
                 break;
             case 32: // space
-                explodeAsteroid(asteroids[0]);
                 player.shoopDaWhoop();
                 break;
             default:
@@ -656,8 +698,22 @@ function drawLaser(laser, ctx){
 
 function drawLasers(ctx){
   for (var i = 0; i < lasers.length; i++) {
-    lasers[i].addMovement(0.01);
-    drawLaser(lasers[i], ctx);
+    boundaryBox.withinBox(lasers[i]);
+    if (lasers[i].active) {
+      lasers[i].addMovement(0.3);
+      drawLaser(lasers[i], ctx);
+      for (var j = 0; j < asteroids.length; j++) {
+        let flag = detectCollision(lasers[i], asteroids[j]);
+        if (flag) {
+          explodeAsteroid(asteroids[j]);
+        }
+      }
+
+      let ufoFlag = detectCollision(lasers[i], ufo);
+      if (ufoFlag) {
+        ufo.registerHit();
+      }
+    }
   }
 }
 
@@ -688,7 +744,7 @@ function drawAsteroid(asteroid, ctx) {
 
 function drawAsteroids(ctx) {
     for (let i = 0; i < asteroids.length; i++) {
-        if (asteroids[i].health != 0) {
+        if (asteroids[i].health > 0) {
             drawAsteroid(asteroids[i], ctx);
         }
     }
@@ -742,6 +798,7 @@ function render() {
     gl.uniformMatrix4fv(mvLoc, false, flatten(mv));
 
     gl.drawArrays(gl.TRIANGLES, 36, points.length-36);
+
 
     drawLasers(mv);
 
