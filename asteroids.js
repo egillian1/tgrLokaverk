@@ -29,6 +29,7 @@ let proLoc;
 let mvLoc;
 let index;
 let boundaryBox;
+let numAsteroids = 5;
 
 
 // TEXTURES
@@ -180,6 +181,7 @@ class UFO {
         this.direction = this.createRandomDirection();
         this.spinSpeed = Math.random()*5+0.05;
         this.spin = {x: 0, y:0, z: 0};
+        this.rad = 0.315;
     };
 
     get getCoords() {
@@ -242,12 +244,12 @@ class UFO {
 
     updateBounds() {
         return {
-            back: this.coords.z - 0.25,
-            front: this.coords.z + 0.25,
-            top: this.coords.y + 0.1,
-            bottom: this.coords.y - 0.1,
-            left: this.coords.x - 0.25,
-            right: this.coords.x + 0.25
+            back: this.coords.z - this.rad,
+            front: this.coords.z + this.rad,
+            top: this.coords.y + this.rad,
+            bottom: this.coords.y - this.rad,
+            left: this.coords.x - this.rad,
+            right: this.coords.x + this.rad
         }
     }
 
@@ -454,6 +456,18 @@ class BoundaryBox {
             console.log(object.coords);
         }
     }
+
+    getRandomLocationWithinBox(){
+      let prob = 0.5;
+      let xrand = Math.random() > prob ? 1: -1;
+      let yrand = Math.random() > prob ? 1: -1;
+      let zrand = Math.random() > prob ? 1: -1;
+      return {
+        x: Math.random()*(this.width/2)*xrand,
+        y: Math.random()*(this.height/2)*yrand,
+        z: Math.random()*(this.depth/2)*zrand
+      }
+    }
 }
 
 function configureTexture(image) {
@@ -467,6 +481,8 @@ function configureTexture(image) {
     return texture;
 }
 
+
+
 window.onload = function init() {
     console.log(UFO_INTERVAL);
     canvas = document.getElementById("gl-canvas");
@@ -479,8 +495,8 @@ window.onload = function init() {
     colorAsteroid();
     console.log(points.length);
 
-    // boundaryBox = new BoundaryBox(25, 25, 25);
-    boundaryBox = new BoundaryBox(7.5,7.5,7.5);
+    boundaryBox = new BoundaryBox(25, 25, 25);
+    // boundaryBox = new BoundaryBox(7.5,7.5,7.5);
     console.log(boundaryBox);
 
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -546,15 +562,11 @@ window.onload = function init() {
         z: -3
     }, 0);
 
-    let asteroid = new Asteroid({
-        x: 0,
-        y: 0,
-        z: -3
-    }, 2);
-    asteroids.push(asteroid);
-    console.log(points.length - 36);
+    for (var i = 0; i < numAsteroids; i++) {
+      let randHealth = Math.random()*2+1;
+      asteroids.push(new Asteroid(boundaryBox.getRandomLocationWithinBox(),randHealth));
+    }
 
-    console.log(asteroids[0]);
 
     // Event listener for keyboard
     window.addEventListener("keydown", function(e) {
@@ -743,7 +755,10 @@ function render() {
 
     boundaryBox.withinBox(player);
     boundaryBox.withinBox(ufo);
-    boundaryBox.withinBox(asteroids[0]);
+
+    for (var i = 0; i < asteroids.length; i++) {
+      boundaryBox.withinBox(asteroids[i]);
+    }
 
     detectCollision(player, asteroids[0]);
     gl.uniformMatrix4fv(mvLoc, false, flatten(mv));
