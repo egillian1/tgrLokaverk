@@ -65,7 +65,7 @@ const MIN_UFO_TIME = 5; //seconds
 const MAX_UFO_TIME = 15; // seconds
 
 let UFO_INTERVAL = (Math.random() * (MAX_UFO_TIME - MIN_UFO_TIME) + MIN_UFO_TIME) * 1000;
-let ASTEROID_INTERVAL = 20 * 1000; // seconds
+let ASTEROID_INTERVAL = 10 * 1000; // seconds
 
 
 setInterval(function(){
@@ -78,13 +78,17 @@ setInterval(function(){
 setInterval(function(){
   let randHealth = Math.random()*2+1;
   asteroids.push(new Asteroid(boundaryBox.getRandomLocationWithinBox(), randHealth));
-}, ASTEROID_INTERVAL)
+}, ASTEROID_INTERVAL);
+
+setInterval(function(){
+  ufo.shoopDaWhoop();
+}, (Math.random()*(30-10)+10)*1000);
 
 class Laser {
   constructor(coords, direction, angles, firedByPlayer) {
     this.coords = coords;
     this.direction = direction;
-    this.firedByPlayer = this.firedByPlayer;
+    this.firedByPlayer = firedByPlayer;
     this.angles = angles;
     this.updateBounds();
     this.active = true;
@@ -272,6 +276,41 @@ class UFO {
       this.spin.z += this.spinSpeed;
       this.bounds = this.updateBounds();
     }
+
+
+    shoopDaWhoop(){
+
+      if (this.health <= 0) {
+        return;
+      }
+
+      laserSound.play();
+
+      let tmpX = this.coords.x;
+      let tmpY = this.coords.y;
+      let tmpZ = this.coords.z;
+      let tmpCoords = {
+        x: tmpX,
+        y: tmpY,
+        z: tmpZ
+      };
+
+      let prob = 0.5;
+      let xrand = Math.random() > prob ? 1: -1;
+      let yrand = Math.random() > prob ? 1: -1;
+      let zrand = Math.random() > prob ? 1: -1;
+
+      let tmpDirection = {
+        x: Math.random()*xrand,
+        y: Math.random()*yrand,
+        z: Math.random()*zrand
+      };
+      let tmpAngles = [Math.random()*(360-1)+1, Math.random()*(360-1)+1];
+      let tmpLaser = new Laser(tmpCoords, tmpDirection, tmpAngles, false);
+      lasers.push(tmpLaser);
+    }
+
+
 }
 
 // The position variable contains the (x,y,z) co-ordinates of the viewer,
@@ -640,6 +679,7 @@ window.onload = function init() {
                 player.addMovement(-movementSize);
                 break;
             case 32: // space
+                e.preventDefault();
                 player.shoopDaWhoop();
                 break;
             default:
@@ -765,7 +805,7 @@ function drawLasers(ctx){
 
       let ufoFlag = detectCollision(lasers[i], ufo);
       console.log("UFO FLAG "+ ufoFlag);
-      if (ufoFlag) {
+      if (ufoFlag && lasers[i].firedByPlayer) {
         lasers[i].deactivate();
         ufo.registerHit();
       }
@@ -773,10 +813,18 @@ function drawLasers(ctx){
 
       for (var j = 0; j < asteroids.length; j++) {
         let flag = detectCollision(lasers[i], asteroids[j]);
-        if (flag && lasers[i].active) {
-          explodeAsteroid(asteroids[j]);
+        console.log(lasers[i].firedByPlayer);
+        if (flag && lasers[i].active && lasers[i].firedByPlayer) {
           lasers[i].deactivate();
+          explodeAsteroid(asteroids[j]);
         }
+      }
+
+      let playerFlag = detectCollision(lasers[i],player);
+
+      if(playerFlag && !lasers[i].firedByPlayer){
+        lasers[i].deactivate();
+        player.registerHit();
       }
 
     }
