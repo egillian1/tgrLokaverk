@@ -42,7 +42,7 @@ let spaceshipSound = new Audio("audio/rocket.wav");
 let laserSound = new Audio("audio/Laser_Gun.wav");
 let ufoSound = new Audio("audio/Spaceship_Alarm.mp3");
 
-// Varibles for user view
+// VIEW
 const movementSize = 0.005; // Size of forward/backward step
 // How many degrees are added/detracted to heading for each button push
 const degreesPerTurn = 10.0;
@@ -50,30 +50,33 @@ const degreesPerTurn = 10.0;
 const MAX_HEALTH = 3;
 
 let ufo;
-
 const MIN_UFO_TIME = 5; //seconds
 const MAX_UFO_TIME = 15; // seconds
 
 let UFO_INTERVAL = (Math.random() * (MAX_UFO_TIME - MIN_UFO_TIME) + MIN_UFO_TIME) * 1000;
 let ASTEROID_INTERVAL = 10 * 1000; // seconds
 
-
+// Sets how frequently a UFO appears
 setInterval(function(){
   if (ufo.health == 0) {
     ufo.revive();
   }
 }, UFO_INTERVAL);
 
-
+// Sets how frequently a new asteroid appears
 setInterval(function(){
   let randHealth = Math.random()*2+1;
   asteroids.push(new Asteroid(boundaryBox.getRandomLocationWithinBox(), randHealth));
 }, ASTEROID_INTERVAL);
 
+// Sets how often a UFO fires a laser
 setInterval(function(){
   ufo.shoopDaWhoop();
 }, (Math.random()*(30-10)+10)*1000);
 
+// The variables coords are the x, y and z co-ordinates of the middle of
+// the box, irection is an x, y and z vector with the current heading,
+// angles are Euleur angles of the heading.
 class Laser {
   constructor(coords, direction, angles, firedByPlayer) {
     this.coords = coords;
@@ -125,9 +128,6 @@ class Asteroid {
     };
 
     createRandomSpeed() {
-        // let max = 0.02;
-        // let min = 0.001;
-
         let max = 0.005;
         let min = 0.0009;
 
@@ -162,13 +162,11 @@ class Asteroid {
     }
 
     registerHit() {
-
       this.health--;
         if (this.health <= 0)
             return;
         this.size = this.health / MAX_HEALTH;
         this.bounds = this.updateBounds();
-
     }
 
     updateBounds() {
@@ -191,13 +189,10 @@ class Asteroid {
       this.spin.z += this.spinSpeed;
       this.bounds = this.updateBounds();
     }
-
-
 }
 
 class UFO {
     constructor(coords, health) {
-
         this.coords = coords;
         this.health = health;
         this.bounds = this.updateBounds();
@@ -267,9 +262,7 @@ class UFO {
       this.bounds = this.updateBounds();
     }
 
-
     shoopDaWhoop(){
-
       if (this.health <= 0) {
         return;
       }
@@ -325,7 +318,6 @@ class Ship {
     }
 
     registerHit() {
-
           this.lastHit = time;
           if (!this.invincible) {
             shields--;
@@ -452,7 +444,6 @@ class BoundaryBox {
     }
 
     withinBox(object) {
-
         let laserFlag;
         if(object instanceof Laser){
           laserFlag = true;
@@ -576,7 +567,7 @@ function resetGame(){
       x: 0,
       y: 0,
       z: -3
-  }, 1);
+  }, 0);
 
 }
 
@@ -592,7 +583,6 @@ window.onload = function init() {
     colorAsteroid();
 
     boundaryBox = new BoundaryBox(25, 25, 25);
-    // boundaryBox = new BoundaryBox(7.5,7.5,7.5);
 
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0.8, 0.8, 0.8, 1.0);
@@ -603,15 +593,6 @@ window.onload = function init() {
     let program = initShaders( gl, "vertex-shader", "fragment-shader" );
     gl.useProgram( program );
 
-    /*
-    let cBuffer = gl.createBuffer();
-    gl.bindBuffer( gl.ARRAY_BUFFER, cBuffer );
-    gl.bufferData( gl.ARRAY_BUFFER, flatten(colors), gl.STATIC_DRAW );
-
-    let vColor = gl.getAttribLocation( program, "vColor" );
-    gl.vertexAttribPointer( vColor, 4, gl.FLOAT, false, 0, 0 );
-    gl.enableVertexAttribArray( vColor );
-*/
     let vBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(points), gl.STATIC_DRAW);
@@ -659,7 +640,7 @@ window.onload = function init() {
         x: 0,
         y: 0,
         z: -3
-    }, 1);
+    }, 0);
 
     for (var i = 0; i < numAsteroids; i++) {
       let randHealth = Math.random()*2+1;
@@ -667,9 +648,6 @@ window.onload = function init() {
     }
 
     asteroids.push(new Asteroid({x:0, y:0, z:-5}, 3));
-
-    // let laser = new Laser({x: 0.0, y: 0.0, z: -3.0}, {x: 0.0, y: 0.0, z: -1.0}, true);
-    // lasers.push(laser);
 
     // Event listener for replay button
     document.getElementById("gameOverButton").addEventListener("click", function(){
@@ -723,7 +701,7 @@ function addScore(x){
 
 // Add x to player's shields
 function addShields(x){
-  score += x;
+  shields += x;
   document.getElementById("shields").innerHTML = "Shields: " + shields;
 }
 
@@ -757,7 +735,8 @@ function detectCollision(obj1, obj2){
   return flag;
 }
 
-
+// Creates a square asteroid and pushes it's points to the appropriate
+// arrays
 function colorAsteroid() {
     quad(1, 0, 3, 2);
     quad(2, 3, 7, 6);
@@ -811,6 +790,7 @@ function quad(a, b, c, d) {
     }
 }
 
+// Draw the enveloping box with the starfield
 function drawBoundaryBox(ctx){
   gl.bindTexture(gl.TEXTURE_2D, spaceTexture);
   ctx = mult(ctx, scalem(25, 25, 25));
@@ -830,19 +810,20 @@ function drawLaser(laser, ctx){
 
 function drawLasers(ctx){
   for (var i = 0; i < lasers.length; i++) {
+    // Check if lasers are within boundary box
     boundaryBox.withinBox(lasers[i]);
     if (lasers[i].active) {
       lasers[i].addMovement(0.3);
       drawLaser(lasers[i], ctx);
 
-
+      // Check if lasers hit ufo
       let ufoFlag = detectCollision(lasers[i], ufo);
       if (ufoFlag && lasers[i].firedByPlayer && ufo.health == 1) {
         lasers[i].deactivate();
         ufo.registerHit();
       }
 
-
+      // Check if lasers hit asteroids
       for (var j = 0; j < asteroids.length; j++) {
         let flag = detectCollision(lasers[i], asteroids[j]);
         if (flag && lasers[i].active && lasers[i].firedByPlayer) {
@@ -851,13 +832,15 @@ function drawLasers(ctx){
         }
       }
 
+      // Check if lasers hit player
       let playerFlag = detectCollision(lasers[i],player);
-
       if(playerFlag && !lasers[i].firedByPlayer){
         lasers[i].deactivate();
         player.registerHit();
       }
-
+      // Remove lasers if they are not in the playing area
+    } else {
+      lasers.splice(i, 1);
     }
   }
 }
@@ -930,7 +913,6 @@ function render() {
 
     if (player.invincible) {
       if ((time - player.lastHit) >= 3) {
-        console.log("ITS TIME");
         player.invincible = false;
       }
     }
@@ -939,7 +921,6 @@ function render() {
 
     boundaryBox.withinBox(player);
     boundaryBox.withinBox(ufo);
-
 
     for (var i = 0; i < asteroids.length; i++) {
       boundaryBox.withinBox(asteroids[i]);
@@ -953,16 +934,13 @@ function render() {
     }
 
     gl.uniformMatrix4fv(mvLoc, false, flatten(mv));
-
     gl.drawArrays(gl.TRIANGLES, 36, points.length-36);
 
     player.movePlayer(0.1);
 
     drawLasers(mv);
-
     drawAsteroids(mv);
     updateAsteroids();
-
     drawBoundaryBox(mv);
 
     if (ufo.health != 0) {
