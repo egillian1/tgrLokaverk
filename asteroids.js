@@ -45,7 +45,7 @@ let laserTexture;
 // AUDIO
 
 let explosionSound = new Audio("audio/explosion.wav");
-let spaceshipSound = new Audio("audio/Airplane_Rocket_Close.mp3");
+let spaceshipSound = new Audio("audio/rocket.wav");
 let laserSound = new Audio("audio/Laser_Gun.wav");
 let ufoSound = new Audio("audio/Spaceship_Alarm.mp3");
 
@@ -672,8 +672,8 @@ window.onload = function init() {
                 player.addToPhi(degreesPerTurn);
                 break;
             case 73: // i
-                player.addMovement(movementSize);
                 spaceshipSound.play();
+                player.addMovement(movementSize);
                 break;
             case 75: // k
                 player.addMovement(-movementSize);
