@@ -360,11 +360,11 @@ class Ship {
 
     // Fires a laser in the current heading
     shoopDaWhoop(){
-      let tmpX = this.coords.x*1.1;
-      let tmpY = this.coords.y*1.1;
-      let tmpZ = this.coords.z*1.1;
+      let tmpX = this.coords.x;
+      let tmpY = this.coords.y;
+      let tmpZ = this.coords.z;
       let tmpCoords = {
-        x: tmpZ,
+        x: tmpX,
         y: tmpY,
         z: tmpZ
       };
@@ -706,10 +706,11 @@ function quad(a, b, c, d) {
 
 
 function drawLaser(laser, ctx){
+  let tmp = ctx;
   gl.bindTexture(gl.TEXTURE_2D, laserTexture);
-  ctx = mult(ctx, translate(laser.coords.x, laser.coords.y, laser.coords.z));
-  ctx = mult(ctx, scalem(0.1, 0.1, 0.7));
-  gl.uniformMatrix4fv(mvLoc, false, flatten(ctx));
+  tmp = mult(ctx, translate(laser.coords.x, laser.coords.y, laser.coords.z));
+  tmp = mult(tmp, scalem(0.1, 0.1, 0.7));
+  gl.uniformMatrix4fv(mvLoc, false, flatten(tmp));
   gl.drawArrays(gl.TRIANGLES, 0, 36);
 }
 
