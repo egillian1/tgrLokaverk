@@ -428,45 +428,27 @@ class BoundaryBox {
         let zmove = this.depth - 0.2;
 
         if (x <= this.leftBound) {
-            console.log("Too far left!");
-            console.log(object.coords);
             object.displace(xmove, 0, 0);
-            console.log(object.coords);
         }
 
         if (x >= this.rightBound) {
-            console.log("Too far right!");
-            console.log(object.coords);
             object.displace(-xmove, 0, 0);
-            console.log(object.coords);
         }
 
         if (y <= this.lowerBound) {
-            console.log("Too low!");
-            console.log(object.coords);
             object.displace(0, ymove, 0);
-            console.log(object.coords);
         }
 
         if (y >= this.upperBound) {
-            console.log("Too high");
-            console.log(object.coords);
             object.displace(0, -ymove, 0);
-            console.log(object.coords);
         }
 
         if (z >= this.frontBound) {
-            console.log("Too close!");
-            console.log(object.coords);
             object.displace(0,0,-zmove);
-            console.log(object.coords);
         }
 
         if (z <= this.backBound) {
-            console.log("Too far away!");
-            console.log(object.coords);
             object.displace(0,0,zmove);
-            console.log(object.coords);
         }
     }
 
@@ -506,11 +488,9 @@ window.onload = function init() {
     }
 
     colorAsteroid();
-    console.log(points.length);
 
     boundaryBox = new BoundaryBox(25, 25, 25);
     // boundaryBox = new BoundaryBox(7.5,7.5,7.5);
-    console.log(boundaryBox);
 
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0.8, 0.8, 0.8, 1.0);
@@ -611,7 +591,6 @@ window.onload = function init() {
                 player.shoopDaWhoop();
                 break;
             default:
-                console.log(e.keyCode);
                 break;
         }
     });
@@ -708,7 +687,7 @@ function quad(a, b, c, d) {
 function drawLaser(laser, ctx){
   gl.bindTexture(gl.TEXTURE_2D, laserTexture);
   ctx = mult(ctx, translate(laser.coords.x, laser.coords.y, laser.coords.z));
-  ctx = mult(ctx, scalem(0.1, 0.1, 0.7));
+  ctx = mult(ctx, scalem(0.05, 0.05, 0.1));
   gl.uniformMatrix4fv(mvLoc, false, flatten(ctx));
   gl.drawArrays(gl.TRIANGLES, 0, 36);
 }
@@ -796,8 +775,6 @@ function render() {
     for (var i = 0; i < asteroids.length; i++) {
       detectCollision(player, asteroids[i]);
     }
-
-
 
     gl.uniformMatrix4fv(mvLoc, false, flatten(mv));
 
