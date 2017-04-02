@@ -106,8 +106,8 @@ class Laser {
 
   updateBounds() {
       this.bounds = {
-          back: this.coords.z - 0.7,
-          front: this.coords.z + 0.7,
+          back: this.coords.z - 0.2,
+          front: this.coords.z + 0.2,
           top: this.coords.y - 0.2,
           bottom: this.coords.y + 0.2,
           left: this.coords.x - 0.2,
@@ -750,7 +750,9 @@ function quad(a, b, c, d) {
 function drawLaser(laser, ctx){
   gl.bindTexture(gl.TEXTURE_2D, laserTexture);
   ctx = mult(ctx, translate(laser.coords.x, laser.coords.y, laser.coords.z));
-  ctx = mult(ctx, scalem(0.05, 0.05, 0.1));
+  ctx = mult(ctx, rotateY(laser.angles[1]));
+  ctx = mult(ctx, rotateZ(laser.angles[0]));
+  ctx = mult(ctx, scalem(0.05, 0.2, 0.05));
   gl.uniformMatrix4fv(mvLoc, false, flatten(ctx));
   gl.drawArrays(gl.TRIANGLES, 0, 36);
 }
