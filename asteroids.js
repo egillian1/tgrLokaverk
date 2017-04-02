@@ -33,7 +33,7 @@ let boundaryBox;
 let numAsteroids = 5;
 
 let score = 0;
-let shields = 0;
+let shields = 3;
 
 // TEXTURES
 
@@ -550,6 +550,18 @@ window.onload = function init() {
     render();
 }
 
+// Add x to the player score and display it to user
+function addScore(x){
+  score += x;
+  document.getElementById("score").innerHTML = "Score: " + score;
+}
+
+// Add x to player's shields
+function addShields(x){
+  score += x;
+  document.getElementById("shields").innerHTML = "Shields: " + shields;
+}
+
 // Checks if the two objects are colliding
 function detectCollision(obj1, obj2){
   let flag = false;
@@ -661,6 +673,7 @@ function explodeAsteroid(asteroid) {
             }, asteroid.health));
         }
     }
+    addScore(100);
 }
 
 function drawAsteroid(asteroid, ctx) {

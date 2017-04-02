@@ -1,0 +1,102 @@
+@import url('https://fonts.googleapis.com/css?family=Comfortaa:400,700|Open+Sans');
+
+#colorPalette{
+  color:#c97064;
+  color: #4cb944;
+  color: #bca371;
+  color: #0d0a0b;
+  color: #5f5566;
+}
+
+*{
+  color:#4cb944;
+  font-family: 'Open Sans', sans-serif;
+}
+
+body {
+  margin: 0;
+  background-color: #5f5566;
+}
+
+canvas{
+  display: inline;
+}
+
+h1{
+  width: 100%;
+  height: 10%;
+  margin: 2% auto;
+  position: relative;
+}
+
+h2{
+  font-size: 1.7em;
+  margin-bottom: 0;
+}
+
+p{
+ font-size: 1.3em;
+}
+
+.canvasWrapper{
+  width: 100%;
+  margin: 0;
+  position: relative;
+}
+
+.fieldWrapper{
+  margin: 5% 0;
+}
+
+.flexContainer{
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: stretch;
+  align-content: stretch;
+}
+
+.flexWrapper{
+  width: 45%;
+}
+
+.mainWrapper{
+  width: 600px;
+  margin: 0 auto;
+}
+
+.canvasWrapper span{
+  position: absolute;
+  color: #43a33c;
+  font-size: 1.3em;
+  left: 10px;
+}
+
+.textCentering{
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Comfortaa', cursive;
+  font-size: 1.7em;
+}
+
+#score{
+  top: 5px;
+}
+
+#shields{
+  top: 35px;
+}
+
+::-webkit-scrollbar {
+    width: 12px;
+}
+
+
+::-webkit-scrollbar-thumb {
+    border-radius: 5px;
+    background-color: #4cb944;
+}
