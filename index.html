@@ -41,47 +41,46 @@ main()
 </head>
 
 <body>
-  <img id = "texAsteroid" src = "img/asteroid_texture.jpg" hidden></img>
-  <img id = "texUFOCockpit" src = "img/ufo_cockpit_texture.jpg" hidden></img>
-  <img id = "texUFOBody" src = "img/ufo_body_texture.jpg" hidden></img>
-  <img id = "texLaser" src = "img/laser.jpg" hidden></img>
-  <img id = "texSpace" src = "img/stars2.jpg" hidden/><
+  <div class="fadeContainer">
+    <img id = "texAsteroid" src = "img/asteroid_texture.jpg" hidden></img>
+    <img id = "texUFOCockpit" src = "img/ufo_cockpit_texture.jpg" hidden></img>
+    <img id = "texUFOBody" src = "img/ufo_body_texture.jpg" hidden></img>
+    <img id = "texLaser" src = "img/laser.jpg" hidden></img>
+    <img id = "texSpace" src = "img/stars2.jpg" hidden/><
 
-  <div class="mainWrapper">
-    <h1><span class="textCentering">asteroids</span></h1>
-    <div class="canvasWrapper">
-      <canvas id="gl-canvas" width="600" height="600">
-        Oops ... your browser doesn't support the HTML5 canvas element
-      </canvas>
+    <div class="mainWrapper">
+      <h1><span class="textCentering">asteroids</span></h1>
+      <div class="canvasWrapper">
+        <canvas id="gl-canvas" width="600" height="600">
+          Oops ... your browser doesn't support the HTML5 canvas element
+        </canvas>
 
-      <span id="score">Score: 0</span>
-      <span id="shields">Shields: 3</span>
-      <span id="gameOverText" class="hidden">GAME OVER</span>
-      <span id="gameOverScore" class="hidden">Your score: 0</span>
-      <button id="gameOverButton" class="hidden">Replay</button>
-    </div>
+        <span id="score">Score: 0</span>
+        <span id="shields">Shields: 3</span>
+        <span id="gameOverText" class="hidden">GAME OVER</span>
+        <span id="gameOverScore" class="hidden">Your score: 0</span>
+        <button id="gameOverButton" class="hidden">Replay</button>
+      </div>
 
-    <div class="instructions">
-      <h2>Controls & Rules</h2>
-      <p>Use w, a, s, d to control the direction to look in. Use i and k to
-      control thrust. Press spacebar to fire. 500 points are awarded for
-      shooting a UFO, 100 points for hitting an asteroid. Running into an
-      object decreases your shields by 1. If you shields fall to 0, the game
-      is over and you can start again.</p>
-    </div>
+      <div class="instructions">
+        <h2>Controls & Rules</h2>
+        <p>Use w, a, s, d to control the direction to look in. Use i and k to
+        control thrust. Press spacebar to fire. 500 points are awarded for
+        shooting a UFO, 100 points for hitting an asteroid. Running into an
+        object decreases your shields by 1. If you shields fall to 0, the game
+        is over and you can start again.</p>
+      </div>
 
-    <div class="authors">
-      <h2>Authors</h2>
-      <p>Egill Ian Guðmundsson - <a href="mailto:eig20@hi.is">eig20@hi.is</a></p>
-      <p>Stefán Carl Peiser - <a href="mailto:scg2@hi.is">scg2@hi.is</a></p>
+      <div class="authors">
+        <h2>Authors</h2>
+        <p>Egill Ian Guðmundsson - <a href="mailto:eig20@hi.is">eig20@hi.is</a></p>
+        <p>Stefán Carl Peiser - <a href="mailto:scg2@hi.is">scg2@hi.is</a></p>
 
-      <p>This project is available on <a href="https://www.github.com/hugbo/tgrLokaverk">GitHub</a></p>
-      <p>Created as a final project in the course Computer Graphics (TÖL203M)
-      at the University of Iceland, spring semester 2017.</p>
+        <p>This project is available on <a href="https://www.github.com/hugbo/tgrLokaverk">GitHub</a></p>
+        <p>Created as a final project in the course Computer Graphics (TÖL203M)
+        at the University of Iceland, spring semester 2017.</p>
+      </div>
     </div>
   </div>
-
-
-
 </body>
 </html>
