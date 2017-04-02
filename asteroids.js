@@ -46,7 +46,7 @@ let laserTexture;
 
 let explosionSound = new Audio("audio/explosion.wav");
 let spaceshipSound = new Audio("audio/Airplane_Rocket_Close.mp3");
-let laserSound = new Audio("audio/Laser_Gun.mp3");
+let laserSound = new Audio("audio/Laser_Gun.wav");
 let ufoSound = new Audio("audio/Spaceship_Alarm.mp3");
 
 // Varibles for user view
@@ -354,6 +354,8 @@ class Ship {
 
     // Fires a laser in the current heading
     shoopDaWhoop(){
+      laserSound.play();
+
       let tmpX = this.coords.x;
       let tmpY = this.coords.y;
       let tmpZ = this.coords.z;
@@ -370,7 +372,6 @@ class Ship {
       let tmpAngles = [this.angles[0], this.angles[1]]
       let tmpLaser = new Laser(tmpCoords, tmpDirection, tmpAngles, true);
       lasers.push(tmpLaser);
-      laserSound.play();
     }
 
     // getters
