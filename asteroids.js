@@ -30,7 +30,7 @@ let proLoc;
 let mvLoc;
 let index;
 let boundaryBox;
-let numAsteroids = 5;
+let numAsteroids = 3;
 
 let score = 0;
 let shields = 3;
