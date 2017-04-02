@@ -65,13 +65,20 @@ const MIN_UFO_TIME = 5; //seconds
 const MAX_UFO_TIME = 15; // seconds
 
 let UFO_INTERVAL = (Math.random() * (MAX_UFO_TIME - MIN_UFO_TIME) + MIN_UFO_TIME) * 1000;
+let ASTEROID_INTERVAL = 20 * 1000; // seconds
 
 
 setInterval(function(){
   if (ufo.health == 0) {
     ufo.revive();
   }
-}, UFO_INTERVAL)
+}, UFO_INTERVAL);
+
+
+setInterval(function(){
+  let randHealth = Math.random()*2+1;
+  asteroids.push(new Asteroid(boundaryBox.getRandomLocationWithinBox(), randHealth));
+}, ASTEROID_INTERVAL)
 
 class Laser {
   constructor(coords, direction, angles, firedByPlayer) {
@@ -127,14 +134,15 @@ class Asteroid {
         // let max = 0.02;
         // let min = 0.001;
 
-        let max = 0.01;
-        let min = 0.001;
+        let max = 0.005;
+        let min = 0.0009;
 
         let dx = Math.random() * (max - min) + min;
         let dy = Math.random() * (max - min) + min;
         let dz = Math.random() * (max - min) + min;
 
-        return {dx: dx, dy: dy, dz: dz};
+        let speedIncrease = 1/this.size;
+        return {dx: dx*speedIncrease, dy: dy*speedIncrease, dz: dz*speedIncrease};
     }
 
     createRandomDirection() {
