@@ -208,7 +208,7 @@ class UFO {
 
     revive() {
         this.health = 1;
-        ufoSound.play();
+        // ufoSound.play();
     }
 
     createRandomSpeed() {
@@ -370,6 +370,7 @@ class Ship {
       let tmpAngles = [this.angles[0], this.angles[1]]
       let tmpLaser = new Laser(tmpCoords, tmpDirection, tmpAngles, true);
       lasers.push(tmpLaser);
+      laserSound.play();
     }
 
     // getters
