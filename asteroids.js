@@ -1,8 +1,6 @@
 let canvas;
 let gl;
 
-let NumVertices = 36;
-
 let program;
 let texture;
 
@@ -10,13 +8,6 @@ let points = [];
 let texCoords = [];
 let asteroids = [];
 let lasers = [];
-
-let xAxis = 0;
-let yAxis = 1;
-let zAxis = 2;
-
-let axis = 0;
-let theta = [0, 0, 0];
 
 let movement = false; // Do we rotate?
 let spinX = 0;
@@ -34,6 +25,7 @@ let numAsteroids = 3;
 
 let score = 0;
 let shields = 3;
+let playing = true;
 
 // TEXTURES
 
@@ -41,6 +33,7 @@ let asteroidTexture;
 let ufoBodyTexture;
 let ufoCockpitTexture;
 let laserTexture;
+let spaceTexture;
 
 // AUDIO
 
@@ -53,9 +46,6 @@ let ufoSound = new Audio("audio/Spaceship_Alarm.mp3");
 const movementSize = 0.005; // Size of forward/backward step
 // How many degrees are added/detracted to heading for each button push
 const degreesPerTurn = 10.0;
-// Half the height of the bounding asteroid
-const boundaryRadius = 10.0;
-const playerBoundingRadius = 0.5;
 
 const MAX_HEALTH = 3;
 
@@ -328,9 +318,9 @@ class Ship {
         this.invincible = false;
         this.lastHit = 0;
         this.velocity = {
-          x: direction[0] / 500,
-          y: direction[1] / 500,
-          z: direction[2] / 500
+          x: 0,
+          y: 0,
+          z: 0
         };
     }
 
@@ -338,13 +328,15 @@ class Ship {
 
           this.lastHit = time;
           if (!this.invincible) {
-            console.log("LOWERING SHIELDS");
             shields--;
             this.invincible = true;
             document.getElementById("shields").innerHTML = "Shields: " + shields;
             if (shields <= 0){
-              alert("GAME OVER \nYour score was: "+score);
-              resetGame();
+              document.getElementById("gameOverScore").innerHTML = "Your score: " + score;
+              var tmpElements = document.getElementsByClassName("hidden");
+              while (tmpElements.length)
+                tmpElements[0].classList.remove("hidden");
+              freezeGame();
               return;
             }
           }
@@ -549,15 +541,26 @@ function configureTexture(image) {
     return texture;
 }
 
+function freezeGame(){
+  playing = false;
+  asteroids = [];
+  lasers = [];
+  player.velocity = {
+    x: 0,
+    y: 0,
+    z: 0
+  }
+}
 
 function resetGame(){
+  playing = true;
+
   player = new Ship({ x: 0, y: 0, z: 0}, [ 0.0, 0.0, -1.0],
     [ 270.0, 90.0], 0.3, 5);
 
   addShields(3);
 
   addScore(-score);
-
 
   asteroids = [];
   for (var i = 0; i < numAsteroids; i++) {
@@ -573,7 +576,7 @@ function resetGame(){
       x: 0,
       y: 0,
       z: -3
-  }, 0);
+  }, 1);
 
 }
 
@@ -637,6 +640,9 @@ window.onload = function init() {
     let laserImage = document.getElementById("texLaser");
     laserTexture = configureTexture( laserImage );
 
+    let spaceImage = document.getElementById("texSpace");
+    spaceTexture = configureTexture( spaceImage );
+
     gl.uniform1i(gl.getUniformLocation(program, "texture"), 0);
 
     proLoc = gl.getUniformLocation(program, "projection");
@@ -653,7 +659,7 @@ window.onload = function init() {
         x: 0,
         y: 0,
         z: -3
-    }, 0);
+    }, 1);
 
     for (var i = 0; i < numAsteroids; i++) {
       let randHealth = Math.random()*2+1;
@@ -665,8 +671,17 @@ window.onload = function init() {
     // let laser = new Laser({x: 0.0, y: 0.0, z: -3.0}, {x: 0.0, y: 0.0, z: -1.0}, true);
     // lasers.push(laser);
 
+    // Event listener for replay button
+    document.getElementById("gameOverButton").addEventListener("click", function(){
+      document.getElementById("gameOverText").classList.add("hidden");
+      document.getElementById("gameOverScore").classList.add("hidden");
+      document.getElementById("gameOverButton").classList.add("hidden");
+      resetGame();
+    })
+
     // Event listener for keyboard
     window.addEventListener("keydown", function(e) {
+      if (playing) {
         switch (e.keyCode) {
             case 87: // w
                 player.addToTheta(degreesPerTurn);
@@ -694,6 +709,7 @@ window.onload = function init() {
             default:
                 break;
         }
+      }
     });
 
     render();
@@ -795,6 +811,12 @@ function quad(a, b, c, d) {
     }
 }
 
+function drawBoundaryBox(ctx){
+  gl.bindTexture(gl.TEXTURE_2D, spaceTexture);
+  ctx = mult(ctx, scalem(25, 25, 25));
+  gl.uniformMatrix4fv(mvLoc, false, flatten(ctx));
+  gl.drawArrays(gl.TRIANGLES, 0, 36);
+}
 
 function drawLaser(laser, ctx){
   gl.bindTexture(gl.TEXTURE_2D, laserTexture);
@@ -815,7 +837,7 @@ function drawLasers(ctx){
 
 
       let ufoFlag = detectCollision(lasers[i], ufo);
-      if (ufoFlag && lasers[i].firedByPlayer) {
+      if (ufoFlag && lasers[i].firedByPlayer && ufo.health == 1) {
         lasers[i].deactivate();
         ufo.registerHit();
       }
@@ -940,6 +962,8 @@ function render() {
 
     drawAsteroids(mv);
     updateAsteroids();
+
+    drawBoundaryBox(mv);
 
     if (ufo.health != 0) {
         drawUFO(mv);

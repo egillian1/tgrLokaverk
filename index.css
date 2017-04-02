@@ -44,6 +44,13 @@ p{
   position: relative;
 }
 
+.canvasWrapper span, button{
+  position: absolute;
+  color: #43a33c;
+  font-size: 1.3em;
+  left: 10px;
+}
+
 .fieldWrapper{
   margin: 5% 0;
 }
@@ -61,16 +68,13 @@ p{
   width: 45%;
 }
 
+.hidden{
+  display: none;
+}
+
 .mainWrapper{
   width: 600px;
   margin: 0 auto;
-}
-
-.canvasWrapper span{
-  position: absolute;
-  color: #43a33c;
-  font-size: 1.3em;
-  left: 10px;
 }
 
 .textCentering{
@@ -81,6 +85,40 @@ p{
   transform: translate(-50%, -50%);
   font-family: 'Comfortaa', cursive;
   font-size: 1.7em;
+}
+
+#gameOverButton{
+  width: 180px;
+  top: 370px;
+  left: 210px;
+  color: #c97064;
+  -webkit-border-radius: 11;
+  -moz-border-radius: 11;
+  border-radius: 11px;
+  padding: 10px 20px 10px 20px;
+  border: solid #c97064 3px;
+  text-decoration: none;
+  background-color: Transparent;
+}
+
+#gameOverButton:hover{
+  background: #4cb944;
+  text-decoration: none;
+}
+
+#gameOverText{
+  top: 200px;
+  left: 165px;
+  font-size: 3em;
+  color:#c97064;
+}
+
+#gameOverScore{
+  width: 180px;
+  top: 260px;
+  left: 210px;
+  color: #c97064;
+  text-align: center;
 }
 
 #score{
