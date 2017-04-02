@@ -73,10 +73,7 @@ class Laser {
   constructor(coords, direction) {
     this.coords = coords;
     this.direction = direction;
-  }
-
-  get getCoords() {
-      return this.coords;
+    this.updateBounds();
   }
 
   // Moves the laser by dist in current heading
@@ -84,6 +81,18 @@ class Laser {
     this.coords.x += dist * this.coords.x;
     this.coords.y += dist * this.coords.y;
     this.coords.z += dist * this.coords.z;
+    this.updateBounds();
+  }
+
+  updateBounds() {
+      this.bounds = {
+          back: this.coords.z - 0.7,
+          front: this.coords.z + 0.7,
+          top: this.coords.y - 0.2,
+          bottom: this.coords.y + 0.2,
+          left: this.coords.x - 0.2,
+          right: this.coords.x + 0.2
+      }
   }
 }
 
@@ -333,30 +342,33 @@ class Ship {
         }
     }
 
+    // Fires a laser in the current heading
+    shoopDaWhoop(){
+      let tmpX = this.coords.x*1.1;
+      let tmpY = this.coords.y*1.1;
+      let tmpZ = this.coords.z*1.1;
+      let tmpCoords = {
+        x: tmpZ,
+        y: tmpY,
+        z: tmpZ
+      };
+      let tmpDirection = {
+        x: this.direction[0],
+        y: this.direction[1],
+        z: this.direction[2]
+      };
+      let tmpLaser = new Laser(tmpCoords, tmpDirection);
+      console.log(tmpLaser.coords);
+      console.log(tmpLaser.direction);
+      lasers.push(tmpLaser);
+    }
+
     // getters
-    get positionX() {
-        return this.coords.x;
-    }
-    get positionY() {
-        return this.coords.y;
-    }
-    get positionZ() {
-        return this.coords.z;
-    }
     get theta() {
         return this.angles[0];
     }
     get phi() {
         return this.angles[1];
-    }
-    get directionX() {
-        return this.direction[0];
-    }
-    get directionY() {
-        return this.direction[1];
-    }
-    get directionZ() {
-        return this.direction[2];
     }
     get positionVector() {
         return vec3(this.coords.x, this.coords.y, this.coords.z);
@@ -369,29 +381,11 @@ class Ship {
         return this.size;
     }
     // setters
-    set setPositionX(x) {
-        this.coords.x = x;
-    }
-    set setPositionY(y) {
-        this.coords.y = y;
-    }
-    set setPositionZ(z) {
-        this.coords.z = z;
-    }
     set setTheta(theta) {
         this.angles[0] = theta;
     }
     set setPhi(phi) {
         this.angles[1] = phi;
-    }
-    set setDirectionX(x) {
-        this.direction[0] = x;
-    }
-    set setDirectionY(y) {
-        this.direction[1] = y;
-    }
-    set setDirectionZ(z) {
-        this.direction[2] = z;
     }
 }
 
@@ -608,6 +602,7 @@ window.onload = function init() {
                 break;
             case 32: // space
                 explodeAsteroid(asteroids[0]);
+                player.shoopDaWhoop();
                 break;
             default:
                 console.log(e.keyCode);
@@ -707,7 +702,7 @@ function quad(a, b, c, d) {
 function drawLaser(laser, ctx){
   gl.bindTexture(gl.TEXTURE_2D, laserTexture);
   ctx = mult(ctx, translate(laser.coords.x, laser.coords.y, laser.coords.z));
-  ctx = mult(ctx, scalem(0.2, 0.2, 0.7));
+  ctx = mult(ctx, scalem(0.1, 0.1, 0.7));
   gl.uniformMatrix4fv(mvLoc, false, flatten(ctx));
   gl.drawArrays(gl.TRIANGLES, 0, 36);
 }
