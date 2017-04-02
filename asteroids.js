@@ -32,6 +32,8 @@ let index;
 let boundaryBox;
 let numAsteroids = 5;
 
+let score = 0;
+let shields = 0;
 
 // TEXTURES
 
@@ -72,9 +74,11 @@ setInterval(function(){
 }, UFO_INTERVAL)
 
 class Laser {
-  constructor(coords, direction) {
+  constructor(coords, direction, angles, firedByPlayer) {
     this.coords = coords;
     this.direction = direction;
+    this.firedByPlayer = this.firedByPlayer;
+    this.angles = angles;
     this.updateBounds();
   }
 
@@ -110,26 +114,6 @@ class Asteroid {
         this.spin = {x: 0, y: 0, z: 0};
         this.spinSpeed = Math.random()*(2)+0.01;
     };
-
-    get getCoords() {
-        return this.coords;
-    }
-
-    set updateCoords(coords) {
-        this.coords = coords;
-    }
-
-    get getSpeed() {
-        return this.speed;
-    }
-
-    get getDirection() {
-        return this.direction;
-    }
-
-    get radius() {
-        return this.radius;
-    }
 
     createRandomSpeed() {
         // let max = 0.02;
@@ -211,26 +195,6 @@ class UFO {
         this.spin = {x: 0, y:0, z: 0};
         this.rad = 0.315;
     };
-
-    get getCoords() {
-        return this.coords;
-    }
-
-    set updateCoords(coords) {
-        this.coords = coords;
-    }
-
-    get getSpeed() {
-        return this.speed;
-    }
-
-    get getDirection() {
-        return this.direction;
-    }
-
-    get radius(){
-      return this.rad;
-    }
 
     revive() {
         this.health = 1;
@@ -345,7 +309,6 @@ class Ship {
 
     // Calculate a new direction vector for heading
     recalculateDirection() {
-      console.log("Recalculating");
         this.direction[0] = Math.sin(radians(this.angles[0])) * Math.cos(radians(this.angles[1]));
         this.direction[1] = Math.cos(radians(this.angles[0]));
         this.direction[2] = Math.sin(radians(this.angles[0])) * Math.sin(radians(this.angles[1]));
@@ -374,9 +337,8 @@ class Ship {
         y: this.direction[1],
         z: this.direction[2]
       };
-      let tmpLaser = new Laser(tmpCoords, tmpDirection);
-      console.log(tmpLaser.coords);
-      console.log(tmpLaser.direction);
+      let tmpAngles = [this.angles[0], this.angles[1]]
+      let tmpLaser = new Laser(tmpCoords, tmpDirection, tmpAngles, true);
       lasers.push(tmpLaser);
     }
 
@@ -393,16 +355,6 @@ class Ship {
     // Returns appropriate "eye" vector for use with the lookAt method
     get eyeVector() {
         return vec3(this.coords.x + this.direction[0], this.coords.y + this.direction[1], this.coords.z + this.direction[2]);
-    }
-    get radius() {
-        return this.size;
-    }
-    // setters
-    set setTheta(theta) {
-        this.angles[0] = theta;
-    }
-    set setPhi(phi) {
-        this.angles[1] = phi;
     }
 }
 
@@ -480,7 +432,6 @@ function configureTexture(image) {
 
 
 window.onload = function init() {
-    console.log(UFO_INTERVAL);
     canvas = document.getElementById("gl-canvas");
 
     gl = WebGLUtils.setupWebGL(canvas);
@@ -562,7 +513,7 @@ window.onload = function init() {
       asteroids.push(new Asteroid(boundaryBox.getRandomLocationWithinBox(),randHealth));
     }
 
-    let laser = new Laser({x: 0.0, y: 0.0, z: -3.0}, {x: 0.0, y: 0.0, z: -1.0});
+    let laser = new Laser({x: 0.0, y: 0.0, z: -3.0}, {x: 0.0, y: 0.0, z: -1.0}, true);
     lasers.push(laser);
 
     // Event listener for keyboard
@@ -603,29 +554,28 @@ window.onload = function init() {
 function detectCollision(obj1, obj2){
   let flag = false;
   let counter = 0;
+  // Check x co-ordinate
   if(obj1.bounds.right >= obj2.bounds.left && obj1.bounds.right <= obj2.bounds.right){
     counter++;
   } else if(obj1.bounds.left >= obj2.bounds.left && obj1.bounds.left <= obj2.bounds.right){
     counter++;
   }
-
+  // Check y co-ordinate
   if(obj1.bounds.top <= obj2.bounds.top && obj1.bounds.top >= obj2.bounds.bottom){
     counter++
   } else if (obj1.bounds.bottom <= obj2.bounds.top && obj1.bounds.bottom >= obj2.bounds.bottom) {
     counter++
   }
-
+  // Check z co-ordinate
   if (obj1.bounds.front <= obj2.bounds.front && obj1.bounds.front >= obj2.bounds.back){
     counter++;
   } else if(obj1.bounds.back <= obj2.bounds.front && obj1.bounds.back >= obj2.bounds.back){
     counter++;
   }
-
+  // Notify of collision if x, y and z co-ordinates are inside other object
   if(counter == 3){
-    console.log("COLLISION");
     flag = true;
   }
-
   return flag;
 }
 
@@ -685,7 +635,6 @@ function quad(a, b, c, d) {
 
 
 function drawLaser(laser, ctx){
-  let tmp = ctx;
   gl.bindTexture(gl.TEXTURE_2D, laserTexture);
   ctx = mult(ctx, translate(laser.coords.x, laser.coords.y, laser.coords.z));
   ctx = mult(ctx, scalem(0.05, 0.05, 0.1));

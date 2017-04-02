@@ -1,6 +1,7 @@
 <html>
+<head>
 <meta charset="utf-8" />
-
+<link rel="stylesheet" href="index.css"/>
 <script id="vertex-shader" type="x-shader/x-vertex">
 
 attribute  vec4 vPosition;
@@ -37,18 +38,33 @@ main()
 <script type="text/javascript" src="./Common/initShaders.js"></script>
 <script type="text/javascript" src="./Common/MV.js"></script>
 <script type="text/javascript" src="asteroids.js"></script>
+</head>
 
 <body>
-<canvas id="gl-canvas" width="600" height="600">
-Oops ... your browser doesn't support the HTML5 canvas element
-</canvas>
+  <img id = "texAsteroid" src = "img/asteroid_texture.jpg" hidden></img>
+  <img id = "texUFOCockpit" src = "img/ufo_cockpit_texture.jpg" hidden></img>
+  <img id = "texUFOBody" src = "img/ufo_body_texture.jpg" hidden></img>
+  <img id = "texLaser" src = "img/laser.jpg" hidden></img>
 
-<img id = "texAsteroid" src = "img/asteroid_texture.jpg" hidden></img>
-<img id = "texUFOCockpit" src = "img/ufo_cockpit_texture.jpg" hidden></img>
-<img id = "texUFOBody" src = "img/ufo_body_texture.jpg" hidden></img>
-<img id = "texLaser" src = "img/laser.jpg" hidden></img>
+  <div class="mainWrapper">
+    <h1><span class="textCentering">asteroids</span></h1>
+    <div class="canvasWrapper">
+      <canvas id="gl-canvas" width="600" height="600">
+        Oops ... your browser doesn't support the HTML5 canvas element
+      </canvas>
 
-<br/>
+      <span id="score">Score: 0</span>
+      <span id="shields">Shields: 3</span>
+    </div>
+
+    <div class="instructions">
+      <h2>Controls</h2>
+      <p>Use w, a, s, d to control the direction to look in. Use i and k to
+      control thrust. Press spacebar to fire.</p>
+    </div>
+  </div>
+
+
 
 </body>
 </html>
