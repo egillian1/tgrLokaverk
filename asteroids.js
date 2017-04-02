@@ -80,9 +80,9 @@ class Laser {
 
   // Moves the laser by dist in current heading
   addMovement(dist){
-    this.coords.x += dist * this.coords.x;
-    this.coords.y += dist * this.coords.y;
-    this.coords.z += dist * this.coords.z;
+    this.coords.x += dist * this.direction.x;
+    this.coords.y += dist * this.direction.y;
+    this.coords.z += dist * this.direction.z;
     this.updateBounds();
   }
 
@@ -345,6 +345,7 @@ class Ship {
 
     // Calculate a new direction vector for heading
     recalculateDirection() {
+      console.log("Recalculating");
         this.direction[0] = Math.sin(radians(this.angles[0])) * Math.cos(radians(this.angles[1]));
         this.direction[1] = Math.cos(radians(this.angles[0]));
         this.direction[2] = Math.sin(radians(this.angles[0])) * Math.sin(radians(this.angles[1]));
