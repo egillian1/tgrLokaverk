@@ -793,7 +793,12 @@ function render() {
       boundaryBox.withinBox(asteroids[i]);
     }
 
-    detectCollision(player, asteroids[0]);
+    for (var i = 0; i < asteroids.length; i++) {
+      detectCollision(player, asteroids[i]);
+    }
+
+
+
     gl.uniformMatrix4fv(mvLoc, false, flatten(mv));
 
     gl.drawArrays(gl.TRIANGLES, 36, points.length-36);
