@@ -23,7 +23,7 @@ let spinX = 0;
 let spinY = 0;
 let origX;
 let origY;
-
+let time = 0;
 let zDist = -4.0;
 
 let proLoc;
@@ -120,6 +120,7 @@ class Asteroid {
         this.direction = this.createRandomDirection();
         this.spin = {x: 0, y: 0, z: 0};
         this.spinSpeed = Math.random()*(2)+0.01;
+        this.lastHit = 0;
     };
 
     createRandomSpeed() {
@@ -159,11 +160,13 @@ class Asteroid {
     }
 
     registerHit() {
-        if (this.health == 0)
+
+      this.health--;
+        if (this.health <= 0)
             return;
-        this.health--;
         this.size = this.health / MAX_HEALTH;
         this.bounds = this.updateBounds();
+
     }
 
     updateBounds() {
@@ -205,7 +208,7 @@ class UFO {
 
     revive() {
         this.health = 1;
-        // ufoSound.play();
+        ufoSound.play();
     }
 
     createRandomSpeed() {
@@ -235,11 +238,10 @@ class UFO {
     }
 
     registerHit() {
-        if (this.health == 0)
-            return;
         this.health--;
         ufoSound.pause();
         explosionSound.play();
+        addScore(500);
     }
 
     updateBounds() {
@@ -270,13 +272,32 @@ class UFO {
 // is phi. boundingBox contains the 8 corners of the box that bounds the player
 // and size is the "radius" (half the height) of the bounding box.
 class Ship {
-    constructor(position, direction, angles, scale, health) {
+    constructor(position, direction, angles, scale) {
         this.coords = position;
         this.direction = direction;
         this.angles = angles;
         this.rad = scale;
-        this.health = health;
         this.bounds = this.updateBounds();
+        this.invincible = false;
+        this.lastHit = 0;
+    }
+
+
+
+    registerHit() {
+
+          this.lastHit = time;
+          if (!this.invincible) {
+            console.log("LOWERING SHIELDS");
+            shields--;
+            this.invincible = true;
+            document.getElementById("shields").innerHTML = "Shields: " + shields;
+            if (shields <= 0){
+              alert("GAME OVER \nYour score was: "+score);
+              resetGame();
+              return;
+            }
+          }
     }
 
 
@@ -471,6 +492,33 @@ function configureTexture(image) {
 }
 
 
+function resetGame(){
+  player = new Ship({ x: 0, y: 0, z: 0}, [ 0.0, 0.0, -1.0],
+    [ 270.0, 90.0], 0.3, 5);
+
+  addShields(3);
+
+  addScore(-score);
+
+
+  asteroids = [];
+  for (var i = 0; i < numAsteroids; i++) {
+    let randHealth = Math.random()*2+1;
+    asteroids.push(new Asteroid(boundaryBox.getRandomLocationWithinBox(),randHealth));
+  }
+
+  asteroids.push(new Asteroid({x:0, y:0, z:-5}, 3));
+
+  lasers = [];
+
+  ufo = new UFO({
+      x: 0,
+      y: 0,
+      z: -3
+  }, 0);
+
+}
+
 
 window.onload = function init() {
     canvas = document.getElementById("gl-canvas");
@@ -540,7 +588,7 @@ window.onload = function init() {
     gl.uniformMatrix4fv(proLoc, false, flatten(proj));
 
     player = new Ship({ x: 0, y: 0, z: 0}, [ 0.0, 0.0, -1.0],
-      [ 270.0, 90.0], 0.3, 5);
+      [ 270.0, 90.0], 0.3);
 
     //Create base sphere for UFO
     ufo = new UFO({
@@ -608,6 +656,7 @@ function addShields(x){
 function detectCollision(obj1, obj2){
   let flag = false;
   let counter = 0;
+
   // Check x co-ordinate
   if(obj1.bounds.right >= obj2.bounds.left && obj1.bounds.right <= obj2.bounds.right){
     counter++;
@@ -702,17 +751,24 @@ function drawLasers(ctx){
     if (lasers[i].active) {
       lasers[i].addMovement(0.3);
       drawLaser(lasers[i], ctx);
+
+
+      let ufoFlag = detectCollision(lasers[i], ufo);
+      console.log("UFO FLAG "+ ufoFlag);
+      if (ufoFlag) {
+        lasers[i].deactivate();
+        ufo.registerHit();
+      }
+
+
       for (var j = 0; j < asteroids.length; j++) {
         let flag = detectCollision(lasers[i], asteroids[j]);
-        if (flag) {
+        if (flag && lasers[i].active) {
           explodeAsteroid(asteroids[j]);
+          lasers[i].deactivate();
         }
       }
 
-      let ufoFlag = detectCollision(lasers[i], ufo);
-      if (ufoFlag) {
-        ufo.registerHit();
-      }
     }
   }
 }
@@ -781,18 +837,30 @@ function drawUFO(ctx) {
 function render() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+    time += 0.01;
+
+    if (player.invincible) {
+      if ((time - player.lastHit) >= 3) {
+        console.log("ITS TIME");
+        player.invincible = false;
+      }
+    }
     // Positon viewer
     let mv = lookAt(player.positionVector, player.eyeVector, vec3(0.0, 1.0, 0.0));
 
     boundaryBox.withinBox(player);
     boundaryBox.withinBox(ufo);
 
+
     for (var i = 0; i < asteroids.length; i++) {
       boundaryBox.withinBox(asteroids[i]);
     }
 
     for (var i = 0; i < asteroids.length; i++) {
-      detectCollision(player, asteroids[i]);
+      let playerCollision = detectCollision(player, asteroids[i]);
+      if (playerCollision) {
+        player.registerHit();
+      }
     }
 
     gl.uniformMatrix4fv(mvLoc, false, flatten(mv));
