@@ -50,7 +50,7 @@ let laserSound = new Audio("audio/Laser_Gun.wav");
 let ufoSound = new Audio("audio/Spaceship_Alarm.mp3");
 
 // Varibles for user view
-const movementSize = 0.5; // Size of forward/backward step
+const movementSize = 0.005; // Size of forward/backward step
 // How many degrees are added/detracted to heading for each button push
 const degreesPerTurn = 10.0;
 // Half the height of the bounding asteroid
@@ -327,9 +327,12 @@ class Ship {
         this.bounds = this.updateBounds();
         this.invincible = false;
         this.lastHit = 0;
+        this.velocity = {
+          x: direction[0] / 500,
+          y: direction[1] / 500,
+          z: direction[2] / 500
+        };
     }
-
-
 
     registerHit() {
 
@@ -347,7 +350,6 @@ class Ship {
           }
     }
 
-
     updateBounds() {
         return {
             back: this.coords.z - this.rad,
@@ -358,7 +360,6 @@ class Ship {
             right: this.coords.x + this.rad
         }
     }
-
 
     addToTheta(theta) {
         let tmp = this.angles[0] + theta;
@@ -378,10 +379,18 @@ class Ship {
 
     // Moves the viewer by dist in the current heading
     addMovement(dist) {
-        this.coords.x += dist * this.direction[0];
-        this.coords.y += dist * this.direction[1];
-        this.coords.z += dist * this.direction[2];
+        this.velocity.x += dist * this.direction[0];
+        this.velocity.y += dist * this.direction[1];
+        this.velocity.z += dist * this.direction[2];
         this.bounds = this.updateBounds();
+    }
+
+    // Moves the ship in the current heading with regard to velocity
+    movePlayer(){
+      this.coords.x += this.velocity.x;
+      this.coords.y += this.velocity.y;
+      this.coords.z += this.velocity.z;
+      this.bounds = this.updateBounds();
     }
 
     // Calculate a new direction vector for heading
@@ -806,7 +815,6 @@ function drawLasers(ctx){
 
 
       let ufoFlag = detectCollision(lasers[i], ufo);
-      console.log("UFO FLAG "+ ufoFlag);
       if (ufoFlag && lasers[i].firedByPlayer) {
         lasers[i].deactivate();
         ufo.registerHit();
@@ -815,7 +823,6 @@ function drawLasers(ctx){
 
       for (var j = 0; j < asteroids.length; j++) {
         let flag = detectCollision(lasers[i], asteroids[j]);
-        console.log(lasers[i].firedByPlayer);
         if (flag && lasers[i].active && lasers[i].firedByPlayer) {
           lasers[i].deactivate();
           explodeAsteroid(asteroids[j]);
@@ -927,6 +934,7 @@ function render() {
 
     gl.drawArrays(gl.TRIANGLES, 36, points.length-36);
 
+    player.movePlayer(0.1);
 
     drawLasers(mv);
 
